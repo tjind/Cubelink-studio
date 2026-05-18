@@ -1,0 +1,125 @@
+/* ============================================
+   스마트폰 및 태블릿 전용 UI (스마트폰 가로모드 완벽 방어)
+   - 미디어쿼리 한계선을 1024px로 확대하여 가로모드 붕괴를 원천 차단합니다.
+   ============================================ */
+@media screen and (max-width: 1024px) {
+
+  #orientationOverlay { display: none !important; }
+  html, body { overflow: auto; }
+
+  /* 헤더 컴팩트화 및 버튼 간격 보정 */
+  header {
+    height: 52px;
+    padding: 0 10px;
+  }
+  .brand-title { font-size: 14px; letter-spacing: 0.3px; }
+  .brand-version { display: none; }
+  .brand-logo { width: 30px; height: 30px; font-size: 11px; }
+
+  .header-actions { gap: 4px; }
+  .header-actions .btn {
+    padding: 6px 8px;
+    font-size: 11px;
+    min-height: 38px;
+  }
+  #btnResetProgress { font-size: 0; padding: 6px 10px; }
+  #btnResetProgress::after { content: "🔄"; font-size: 16px; }
+
+  #btnConnectInit { font-size: 0; padding: 6px 10px; }
+  #btnConnectInit::after { content: "🔌"; font-size: 18px; }
+
+  #btnRunRealtime { font-size: 11px !important; padding: 6px 10px; }
+  .progress-badge { padding: 4px 8px; font-size: 10px; }
+
+  /* 가로모드에서도 강제로 1열 구조 유지 */
+  .layout {
+    grid-template-columns: 1fr !important;
+    height: calc(100vh - 52px);
+  }
+
+  /* 좌측 미션 패널 슬라이드 인 배치 */
+  .panel-left {
+    position: fixed;
+    top: 52px; left: 0; bottom: 0;
+    width: 82%; max-width: 320px;
+    z-index: 900;
+    transform: translateX(-100%);
+    transition: transform 0.28s ease;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.6);
+  }
+  .panel-left.mobile-open { transform: translateX(0); }
+
+  /* 우측 패널 하단 바텀시트 구조 */
+  .panel-right {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    height: 65vh;
+    border-left: none;
+    border-top: 2px solid var(--gold);
+    border-radius: 16px 16px 0 0;
+    transform: translateY(calc(100% - 44px));
+    transition: transform 0.3s ease;
+    z-index: 800;
+  }
+  .panel-right.mobile-open { transform: translateY(0); }
+
+  .panel-right::before {
+    content: "";
+    position: absolute;
+    top: 6px; left: 50%;
+    transform: translateX(-50%);
+    width: 44px; height: 4px;
+    background: var(--gold);
+    border-radius: 2px;
+    opacity: 0.7;
+  }
+
+  .tabs { padding-top: 14px; }
+  .tab { padding: 12px 8px; font-size: 12px; min-height: 44px; }
+
+  /* 중앙 코딩 공간 확보 */
+  .panel-center {
+    width: 100%;
+    height: calc(100vh - 52px - 44px);
+  }
+
+  .mission-banner { padding: 8px 12px; }
+  .mission-banner .title { font-size: 13px; }
+  .mission-banner .desc { font-size: 11px; margin-top: 2px; }
+
+  .center-toolbar { height: 40px; padding: 0 10px; gap: 6px; }
+  .center-toolbar .btn { padding: 6px 10px; font-size: 11px; min-height: 36px; }
+
+  .panel-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 850;
+  }
+  .panel-overlay.show { display: block; }
+
+  #robot-3d-view { height: 180px !important; }
+  .servo-mini { font-size: 10px; }
+  .modal { padding: 20px; max-width: 96%; }
+  .serial-monitor-body { max-height: 100px; font-size: 10px; }
+
+  #mobileRightToggle {
+    display: flex !important;
+    position: fixed;
+    right: 14px; bottom: 56px;
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gold), var(--gold-soft));
+    color: #000;
+    border: none;
+    font-size: 22px;
+    z-index: 850;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+  }
+  .panel-right.mobile-open ~ #mobileRightToggle { display: none !important; }
+  
+  .hamburger-btn { display: inline-block; }
+}

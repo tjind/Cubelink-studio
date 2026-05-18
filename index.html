@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="icon" href="data:,">
+  <title>CUBELINK Studio v2.6.5 · The Pinnacle of Robot Education</title>
+
+  <script src="libs/blockly/blockly.min.js"></script>
+  <script src="libs/blockly/ko.js"></script>
+
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/mobile.css">
+
+  <script src="js/webserial-polyfill.js"></script>
+</head>
+<body>
+
+
+
+<header>
+  <button class="btn hamburger-btn" id="btnHamburger" title="미션 목록 열기/닫기">☰</button>
+  <div class="brand">
+    <div class="brand-logo">TJ</div>
+    <div class="brand-title">CUBELINK STUDIO<span class="brand-version">v2.6.5</span></div>
+  </div>
+  
+  <div class="header-actions">
+    <span class="progress-badge" id="progressBadge">진행률: 0 / 9</span>
+    <button class="btn" id="btnResetProgress" title="모든 미션 완료 기록을 지웁니다">🔄 진행 초기화</button>
+    
+    <button class="btn primary" id="btnConnectInit" style="background: linear-gradient(135deg, #2ecc71, #27ae60) !important; color: white !important; border: 1px solid #27ae60; font-weight: 700;" title="로봇을 연결하고 모든 모터를 90도 차렷 자세로 정렬합니다.">
+      🔌 로봇 연결 및 초기화 (90도)
+    </button>
+    
+    <button class="btn primary" id="btnRunRealtime" style="background: linear-gradient(135deg, #D4AF37, #B8941F) !important; color: black !important; font-weight: 700;" title="블록 코드를 OTG로 연결된 로봇팔에서 실시간 실행합니다.">
+      ▶ 실시간 실행
+    </button>
+  </div>
+</header>
+
+<div class="graduation-banner" id="graduationBanner">🏆 모든 미션을 완료했습니다! 자유 창작 모드 활성화 — 작업 공간이 넓어졌어요.</div>
+
+<div class="panel-overlay" id="panelOverlay"></div>
+
+<div class="layout">
+  <aside class="panel-left">
+    <div class="panel-header">🎯 미션 선택</div>
+    <div id="missionList"></div>
+    
+    <div class="serial-monitor-bar">
+      <div class="serial-monitor-header">
+        <span>📡 시리얼 모니터</span>
+        <div>
+          <button class="btn" id="btnClearSerial" style="padding:3px 10px;font-size:11px;">🗑️ 지우기</button>
+          <button class="btn" id="btnToggleSerial" style="padding:3px 10px;font-size:11px;">▼ 접기</button>
+        </div>
+      </div>
+      <div class="serial-monitor-body" id="serialMonitor">시뮬레이션 출력이 여기에 표시됩니다.</div>
+    </div>
+  </aside>
+
+  <main class="panel-center">
+    <div class="mission-banner">
+      <div>
+        <div class="title" id="missionTitle">미션을 선택하세요</div>
+        <div class="desc" id="missionDesc">좌측 메뉴에서 미션을 클릭하세요.</div>
+      </div>
+    </div>
+    <div class="center-toolbar">
+      <button class="btn" id="btnReload">🔄 다시 불러오기</button>
+      <button class="btn" id="btnClear">🗑️ 비우기</button>
+    </div>
+    <div id="blocklyArea"><div id="blocklyDiv"></div></div>
+  </main>
+
+  <aside class="panel-right">
+    <div class="tabs">
+      <div class="tab active" data-tab="hint">💡 힌트</div>
+      <div class="tab" data-tab="sim">🎮 시뮬레이터</div>
+      <div class="tab" data-tab="cpp">⚙️ C++ 코드</div>
+    </div>
+    
+    <div class="tab-body active" data-body="hint"><div id="hintPanel">미션을 선택하세요.</div></div>
+
+    <div class="tab-body" data-body="sim">
+      <div class="sim-controls">
+        <button class="btn primary" id="btnSimStart">▶ 시뮬레이션 시작</button>
+        <button class="btn" id="btnSimStop">⏹ 정지</button>
+        <span class="sim-status" id="simStatus">● 대기 중</span>
+      </div>
+      
+      <div class="sim-stage">
+        <div id="robot-3d-view" style="width: 100%; height: 280px; background-color: #0a0a0a; border: 1px solid var(--gold-soft); border-radius: 8px; margin-bottom: 4px; overflow: hidden;"></div>
+
+        <div class="sim-row">
+          <div id="led13" class="led"></div>
+          <div class="sim-label">PIN 13 LED</div>
+        </div>
+
+        <div class="sim-row" style="flex-direction:column;align-items:stretch;gap:4px;">
+          <div class="sim-label" style="font-weight:700;color:var(--gold);">🦾 4축 서보 각도</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;">
+            <div class="servo-mini" data-pin="6">
+              <div class="servo-mini-label">PIN 6 · 베이스</div>
+              <div class="servo-mini-bar"><div class="servo-mini-fill" id="servoFill6"></div></div>
+              <div class="servo-mini-val"><span id="servoAngle6">90</span>°</div>
+            </div>
+            <div class="servo-mini" data-pin="9">
+              <div class="servo-mini-label">PIN 9 · 하단</div>
+              <div class="servo-mini-bar"><div class="servo-mini-fill" id="servoFill9"></div></div>
+              <div class="servo-mini-val"><span id="servoAngle9">90</span>°</div>
+            </div>
+            <div class="servo-mini" data-pin="10">
+              <div class="servo-mini-label">PIN 10 · 상단</div>
+              <div class="servo-mini-bar"><div class="servo-mini-fill" id="servoFill10"></div></div>
+              <div class="servo-mini-val"><span id="servoAngle10">90</span>°</div>
+            </div>
+            <div class="servo-mini" data-pin="11">
+              <div class="servo-mini-label">PIN 11 · 그리퍼</div>
+              <div class="servo-mini-bar"><div class="servo-mini-fill" id="servoFill11"></div></div>
+              <div class="servo-mini-val"><span id="servoAngle11">90</span>°</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sim-row" style="justify-content:space-around;gap:8px;">
+          <div style="text-align:center;">
+            <div class="joy-pad" id="joyPad1" title="조이스틱 1 (왼손)">
+              <div class="joy-dot" id="joyDot1"></div>
+            </div>
+            <div class="sim-label" style="font-size:11px;margin-top:4px;">
+              <b style="color:var(--gold);">조이스틱 1</b><br>A0/A1/D2<br>
+              <small id="joyValue1">X:512 Y:512</small><br>
+              <span id="joySw1State" style="font-size:10px;color:#888;">SW: HIGH</span><br>
+              <button id="joyResetBtn1" style="margin-top:2px;padding:1px 6px;font-size:10px;background:transparent;border:1px solid #D4AF37;color:#D4AF37;border-radius:4px;cursor:pointer;">↺ 중앙</button>
+            </div>
+          </div>
+          <div style="text-align:center;">
+            <div class="joy-pad" id="joyPad2" title="조이스틱 2 (오른손)">
+              <div class="joy-dot" id="joyDot2"></div>
+            </div>
+            <div class="sim-label" style="font-size:11px;margin-top:4px;">
+              <b style="color:var(--gold);">조이스틱 2</b><br>A2/A3/D7<br>
+              <small id="joyValue2">X:512 Y:512</small><br>
+              <span id="joySw2State" style="font-size:10px;color:#888;">SW: HIGH</span><br>
+              <button id="joyResetBtn2" style="margin-top:2px;padding:1px 6px;font-size:10px;background:transparent;border:1px solid #D4AF37;color:#D4AF37;border-radius:4px;cursor:pointer;">↺ 중앙</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="sim-row">
+          <button id="btnD2Sim" style="width:50px;height:50px;border-radius:50%;background:#444;color:#fff;border:3px solid #888;cursor:pointer;user-select:none;font-weight:bold;font-size:13px;">D2</button>
+          <div class="sim-label" style="font-size:12px;">
+            푸시 버튼 (PIN 2, 조이스틱 1 SW 공용)<br>
+            <small id="btnD2State">상태: HIGH (1)</small>
+          </div>
+        </div>
+
+        <div class="sim-row" style="flex-direction:column;align-items:stretch;gap:6px;">
+          <div class="sim-label">📏 초음파 (Trig D4 / Echo D5): <small id="usValue">30</small> cm</div>
+          <input type="range" id="usSlider" min="2" max="100" value="30" style="width:100%;">
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-body" data-body="cpp"><pre id="cppOut" class="code-out">// 코드가 여기에 나타납니다.</pre></div>
+  </aside>
+</div>
+
+<div class="modal-bg" id="uploadModal">
+  <div class="modal">
+    <h2 id="uploadTitle">아두이노에 업로드</h2>
+    <div class="upload-steps">
+      <div class="upload-step" id="step1"><div class="step-icon">1</div><div>보드 자동 인식 및 컴파일</div></div>
+      <div class="upload-step" id="step2"><div class="step-icon">2</div><div>프로그램 업로드</div></div>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="uploadProgress"></div></div>
+    <div class="upload-detail" id="uploadDetail">대기중...</div>
+    <div style="margin-top:20px;">
+      <button class="btn primary" id="btnStartUpload">🚀 업로드 시작</button>
+      <button class="btn" id="btnCloseUpload">닫기</button>
+    </div>
+  </div>
+</div>
+
+<xml id="toolbox" style="display:none">
+  <category name="🔧 기본 구조" colour="#D4AF37">
+    <block type="arduino_setup_loop"></block>
+    <block type="cubelink_delay"></block>
+    <block type="cubelink_delay_sec"></block>
+    <block type="cubelink_delay_us"></block>
+  </category>
+  <category name="🔁 흐름 제어" colour="#5C81A6">
+    <block type="controls_if"></block>
+    <block type="controls_ifelse"></block>
+    <block type="cubelink_repeat_n"></block>
+    <block type="logic_compare"></block>
+    <block type="math_number"><field name="NUM">0</field></block>
+    <block type="math_arithmetic"></block>
+  </category>
+  <category name="📦 변수" colour="#A65C81" custom="VARIABLE"></category>
+  <category name="📡 시리얼 통신" colour="#27AE60">
+    <block type="cubelink_serial_begin"></block>
+    <block type="cubelink_serial_println_text"></block>
+    <block type="cubelink_serial_println_num"></block>
+    <block type="cubelink_serial_println_value"></block>
+  </category>
+  <category name="💡 LED·디지털" colour="#E74C3C">
+    <block type="cubelink_pinmode"></block>
+    <block type="cubelink_digitalwrite"></block>
+    <block type="cubelink_digitalread"></block>
+  </category>
+  <category name="📡 센서·아날로그" colour="#F39C12">
+    <block type="cubelink_analogread"></block>
+    <block type="cubelink_ultrasonic"></block>
+    <block type="cubelink_map"></block>
+  </category>
+  <category name="🤖 서보 모터 (기존)" colour="#3498DB">
+    <block type="cubelink_servo_attach"></block>
+    <block type="cubelink_servo_move_simple"></block>
+    <block type="cubelink_servo_move"></block>
+    <block type="cubelink_servo_smooth_simple"></block>
+    <block type="cubelink_servo_smooth"></block>
+    <block type="cubelink_servo_read"></block>
+  </category>
+  <category name="🕹️ 조이스틱" colour="#9B59B6">
+    <block type="cubelink_joystick_init"></block>
+    <block type="cubelink_joystick_read"></block>
+  </category>
+</xml>
+
+<script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+<script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://unpkg.com/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+
+<script src="js/blocks.js"></script>
+<script src="js/simulator3D.js"></script>
+<script src="js/app.js"></script>
+<script src="js/mobile-ui.js"></script>
+</body>
+</html>
