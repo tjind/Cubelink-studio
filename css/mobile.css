@@ -1,0 +1,29 @@
+/* ============================================
+   CUBELINK Studio - 데스크톱 격리 및 모바일 전용 미디어 쿼리
+   ============================================ */
+
+/* 일반 PC 모니터(가로 1025px 이상) 환경에서는 이 파일의 모든 스타일을 완전히 무시합니다. */
+@media screen and (max-width: 1024px) {
+  
+  /* 오직 화면이 좁은 스마트폰이나 태블릿 기기 환경에서만 작동하는 스타일 */
+  #orientationOverlay { display: none !important; }
+  
+  @media (orientation: portrait) {
+    .layout { grid-template-columns: 1fr !important; }
+    .panel-left { position: fixed; top: 52px; left: 0; bottom: 0; width: 80%; z-index: 900; transform: translateX(-100%); transition: transform 0.2s ease; }
+    .panel-left.mobile-open { transform: translateX(0); }
+    .panel-right { position: fixed; left: 0; right: 0; bottom: 0; height: 60vh; z-index: 800; transform: translateY(calc(100% - 40px)); transition: transform 0.2s ease; }
+    .panel-right.mobile-open { transform: translateY(0); }
+    .panel-center { width: 100%; height: calc(100vh - 92px); }
+    #mobileRightToggle { display: flex !important; }
+  }
+
+  @media (orientation: landscape) {
+    .layout { display: grid !important; grid-template-columns: 210px 1fr 290px !important; height: calc(100vh - 52px) !important; overflow: hidden !important; }
+    .panel-left { position: static !important; transform: none !important; box-shadow: none !important; height: 100% !important; width: auto !important; display: flex !important; flex-direction: column !important; overflow-y: auto !important; }
+    .panel-center { width: auto !important; height: 100% !important; overflow: hidden !important; }
+    .panel-right { position: static !important; transform: none !important; box-shadow: none !important; height: 100% !important; width: auto !important; display: flex !important; flex-direction: column !important; overflow-y: auto !important; }
+    #robot-3d-view { height: 170px !important; min-height: 170px !important; flex-shrink: 0 !important; }
+    #mobileRightToggle { display: none !important; }
+  }
+}

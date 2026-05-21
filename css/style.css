@@ -1,0 +1,297 @@
+:root {
+  --gold: #D4AF37; 
+  --gold-soft: #B8941F; 
+  --gold-glow: rgba(212, 175, 55, 0.35);
+  --black: #0A0A0A; 
+  --charcoal: #1A1A1A; 
+  --charcoal-2: #242424;
+  --warm-white: #FFF8E7; 
+  --text-mute: #C8B98A;
+  --danger: #d9534f; 
+  --success: #5cb85c; 
+  --info: #3498db;
+}
+
+* { box-sizing: border-box; }
+html, body { 
+  margin: 0; padding: 0; height: 100%; 
+  font-family: 'Segoe UI', 'Pretendard', 'Malgun Gothic', sans-serif; 
+  background: var(--black); color: var(--warm-white); overflow: hidden; 
+}
+
+/* 헤더 영역 */
+header { 
+  height: 56px; 
+  background: linear-gradient(90deg, #000, var(--charcoal), #000); 
+  border-bottom: 1px solid var(--gold); 
+  display: flex; align-items: center; justify-content: space-between; 
+  padding: 0 24px; flex-shrink: 0; 
+}
+.brand { display: flex; align-items: center; gap: 14px; }
+.brand-logo { 
+  width: 36px; height: 36px; 
+  background: linear-gradient(135deg, var(--gold), #8a6d1c); 
+  border-radius: 8px; display: flex; align-items: center; justify-content: center; 
+  color: #000; font-weight: 900; font-size: 14px; flex-shrink: 0; 
+}
+.brand-title { font-size: 18px; font-weight: 700; letter-spacing: 1px; color: var(--gold); white-space: nowrap; }
+.brand-version { font-size: 11px; color: var(--text-mute); margin-left: 6px; }
+.header-actions { display: flex; gap: 10px; flex-shrink: 0; align-items: center; }
+.progress-badge { padding: 6px 12px; background: var(--charcoal-2); border: 1px solid var(--gold); border-radius: 20px; font-size: 12px; color: var(--gold); font-weight: 700; }
+
+/* 공통 버튼 */
+button.btn { 
+  background: var(--charcoal-2); color: var(--warm-white); 
+  border: 1px solid var(--gold-soft); padding: 7px 16px; border-radius: 6px; 
+  font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; 
+}
+button.btn:hover:not(:disabled) { background: var(--gold); color: #000; }
+button.btn.primary { background: linear-gradient(135deg, var(--gold), var(--gold-soft)); color: #000; }
+button.btn:disabled { cursor: wait; }
+
+/* 레이아웃 (기본 3열 데스크톱 구조) */
+.layout { display: grid; grid-template-columns: 280px 1fr 420px; height: calc(100vh - 56px); }
+
+/* 좌측 미션 패널 */
+.panel-left { background: var(--charcoal); border-right: 1px solid #333; display: flex; flex-direction: column; overflow: hidden; }
+.panel-header { padding: 14px 18px; background: linear-gradient(90deg, var(--gold-soft), var(--gold)); color: #000; font-weight: 700; font-size: 14px; }
+#missionList { flex: 1; overflow-y: auto; }
+.mission-item { display: flex; gap: 10px; padding: 12px 18px; cursor: pointer; border-left: 3px solid transparent; color: var(--warm-white); }
+.mission-item:hover { background: var(--charcoal-2); border-left-color: var(--gold); }
+.mission-item.active { background: var(--charcoal-2); border-left-color: var(--gold); box-shadow: inset 0 0 16px var(--gold-glow); }
+.mission-item strong { color: var(--gold); font-size: 14px; }
+.mission-item small { color: #D9C98A; font-size: 12px; line-height: 1.4; display: block; margin-top: 3px; }
+.mission-num { width: 26px; height: 26px; border-radius: 50%; background: var(--black); border: 1px solid var(--gold); display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--gold); font-weight: 700; flex-shrink: 0; }
+
+/* 미션 상태 스타일 */
+.mission-item.done { background: linear-gradient(90deg, rgba(92,184,92,0.12), transparent); border-left-color: #5cb85c; }
+.mission-item.done .mission-num { background: #5cb85c; border-color: #5cb85c; color: #000; }
+.mission-item.done strong { color: #a8e6a8; }
+.mission-item.done strong::after { content: " ✓"; color: #5cb85c; }
+.mission-num.in-progress { background: var(--gold); color: #000; animation: pulse 1.4s infinite; }
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 var(--gold-glow); }
+  50% { box-shadow: 0 0 0 6px transparent; }
+}
+
+/* 완료 알림 팝업 */
+.mission-toast { 
+  position: fixed; top: 80px; right: 30px; 
+  background: linear-gradient(135deg, #5cb85c, #3d8b3d); color: #fff; 
+  padding: 14px 22px; border-radius: 10px; border: 2px solid #a8e6a8; 
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5); font-weight: 700; z-index: 2000; 
+  opacity: 0; transform: translateY(-20px); transition: all 0.4s; pointer-events: none; 
+}
+.mission-toast.show { opacity: 1; transform: translateY(0); }
+
+/* 중앙 코딩 영역 */
+.panel-center { display: flex; flex-direction: column; background: #0d0d0d; min-width: 0; }
+.mission-banner { padding: 10px 16px; background: linear-gradient(90deg, var(--charcoal-2), var(--charcoal)); border-bottom: 1px solid var(--gold-soft); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+.mission-banner .title { color: var(--gold); font-weight: 700; font-size: 14px; }
+.mission-banner .desc { color: #E8D9A8; font-size: 13px; margin-top: 4px; }
+.center-toolbar { height: 42px; padding: 0 16px; background: var(--charcoal); border-bottom: 1px solid var(--gold-soft); display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+/* blocklyArea가 전체 공간을 꽉 채우도록 설정 */
+#blocklyArea {
+  width: 100%;
+  height: calc(100vh - 140px); /* 헤더와 배너 제외한 나머지 높이 통째로 고정 */
+  position: relative;
+}
+
+/* blocklyDiv를 절대 좌표로 부모에 꽉 맞춤 */
+#blocklyDiv {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+}
+/* 우측 패널 및 탭 */
+.panel-right { background: var(--charcoal); display: flex; flex-direction: column; border-left: 1px solid #333; min-width: 0; }
+.tabs { display: flex; background: var(--black); border-bottom: 1px solid var(--gold-soft); flex-shrink: 0; }
+.tab { flex: 1; padding: 12px; text-align: center; cursor: pointer; color: #A89968; font-size: 12px; font-weight: 600; border-bottom: 2px solid transparent; }
+.tab.active { color: var(--gold); border-bottom-color: var(--gold); background: var(--charcoal-2); }
+.tab-body { flex: 1; overflow: auto; display: none; padding: 14px; }
+.tab-body.active { display: block; }
+#hintPanel { color: #F0E4B8; font-size: 14px; line-height: 1.6; }
+pre.code-out { background: #050505; color: #c8c8c8; padding: 14px; border-radius: 6px; border: 1px solid #2a2a2a; font-family: monospace; font-size: 12px; white-wrap: pre-wrap; word-break: break-all; margin: 0; }
+
+/* 시뮬레이터 내부 UI 컴팩트화 */
+.tab-body[data-body="sim"] { padding: 8px 10px !important; overflow-y: auto !important; max-height: calc(100vh - 98px) !important; }
+.sim-controls { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
+.sim-controls .btn { padding: 5px 12px !important; font-size: 12px; white-space: nowrap; }
+.sim-status { margin-left: auto; font-size: 11px; color: var(--text-mute); font-weight: 700; white-space: nowrap; }
+.sim-status.running { color: var(--success); }
+
+.sim-stage { background: radial-gradient(circle at center, #1c1c1c, #050505); border: 1px solid var(--gold-soft); border-radius: 10px; padding: 6px 10px; display: flex; flex-direction: column; gap: 4px; }
+.sim-stage .sim-row { display: flex; align-items: center; gap: 14px; width: 100%; padding: 3px 6px; }
+.sim-label { color: #E8D9A8; font-size: 13px; }
+.led { width: 34px; height: 34px; border-radius: 50%; background: #222; border: 2px solid #444; transition: 0.2s; flex-shrink: 0; }
+.led.on { background: #ff4444; box-shadow: 0 0 18px #ff4444; border-color: #ff8888; }
+
+/* 4축 서보 미니 표시 */
+.servo-mini { background: #1a1a1a; border: 1px solid #333; border-radius: 6px; padding: 4px 6px; font-size: 11px; }
+.servo-mini-label { color: #E8D9A8; font-size: 10px; font-weight: 600; margin-bottom: 2px; }
+.servo-mini-bar { height: 6px; background: #0a0a0a; border-radius: 3px; overflow: hidden; margin: 2px 0; }
+.servo-mini-fill { height: 100%; background: linear-gradient(90deg, var(--gold-soft), var(--gold)); width: 50%; transition: width 0.2s; }
+.servo-mini-val { color: var(--gold); font-weight: 700; text-align: right; font-size: 11px; }
+
+/* 조이스틱 및 패드 패널 */
+.joy-pad { width: 80px; height: 80px; background: #1a1a1a; border: 2px solid var(--gold); border-radius: 50%; position: relative; flex-shrink: 0; cursor: grab; touch-action: none; user-select: none; }
+.joy-pad:active { cursor: grabbing; }
+.joy-pad::before, .joy-pad::after { content: ''; position: absolute; background: rgba(212,175,55,0.2); pointer-events: none; }
+.joy-pad::before { left: 50%; top: 8%; bottom: 8%; width: 1px; transform: translateX(-50%); }
+.joy-pad::after { top: 50%; left: 8%; right: 8%; height: 1px; transform: translateY(-50%); }
+.joy-dot { width: 18px; height: 18px; background: var(--gold); border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); box-shadow: 0 0 8px var(--gold); pointer-events: none; transition: transform 0.05s linear; }
+#btnD2Sim { position: relative !important; z-index: 100 !important; pointer-events: auto !important; }
+
+/* 하단 큰 시리얼 모니터 */
+.serial-monitor-bar { margin-top: auto; background: #000; border-top: 2px solid var(--gold-soft); display: flex; flex-direction: column; flex-shrink: 0; height: 280px; transition: height 0.3s; }
+.serial-monitor-bar.collapsed { height: 32px; }
+.serial-monitor-bar.collapsed .serial-monitor-body { display: none; }
+.serial-monitor-header { display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; background: linear-gradient(90deg, var(--charcoal), var(--charcoal-2)); color: var(--gold); font-size: 12px; font-weight: 700; border-bottom: 1px solid #333; flex-shrink: 0; }
+.serial-monitor-header > div { display: flex; gap: 4px; }
+.serial-monitor-body { flex: 1; overflow-y: auto; padding: 8px 12px; font-family: 'Consolas', 'Monaco', monospace; font-size: 12px; color: #9ad29a; white-space: pre-wrap; word-break: break-all; background: #050505; line-height: 1.5; }
+
+/* 미션 그룹 아코디언 */
+.mission-group { border-bottom: 1px solid #2a2a2a; }
+.mission-group-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; cursor: pointer; background: linear-gradient(90deg, var(--charcoal-2), var(--charcoal)); border-left: 4px solid var(--gold); transition: all 0.2s; user-select: none; }
+.mission-group-header:hover { background: var(--charcoal-2); box-shadow: inset 0 0 12px var(--gold-glow); }
+.mission-group-header .group-title { display: flex; align-items: center; gap: 10px; color: var(--gold); font-weight: 700; font-size: 14px; letter-spacing: 0.5px; }
+.mission-group-header .group-badge { font-size: 11px; color: var(--text-mute); background: var(--black); padding: 3px 10px; border-radius: 12px; border: 1px solid var(--gold-soft); }
+.mission-group-header .toggle-arrow { color: var(--gold); font-size: 12px; transition: transform 0.25s; }
+.mission-group.collapsed .toggle-arrow { transform: rotate(-90deg); }
+.mission-group-body { max-height: 1000px; overflow: hidden; transition: max-height 0.3s ease-in-out; }
+.mission-group.collapsed .mission-group-body { max-height: 0; }
+
+.mission-group[data-level="basic"] .mission-group-header { border-left-color: #5cb85c; }
+.mission-group[data-level="basic"] .group-title { color: #a8e6a8; }
+.mission-group[data-level="intermediate"] .mission-group-header { border-left-color: #f0ad4e; }
+.mission-group[data-level="intermediate"] .group-title { color: #ffd58a; }
+.mission-group[data-level="advanced"] .mission-group-header { border-left-color: #d9534f; }
+.mission-group[data-level="advanced"] .group-title { color: #f5a8a8; }
+
+/* 업로드 모달창 */
+.modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; align-items: center; justify-content: center; }
+.modal-bg.show { display: flex; }
+.modal { background: linear-gradient(135deg, var(--charcoal-2), var(--charcoal)); border: 2px solid var(--gold); border-radius: 16px; padding: 36px; text-align: center; max-width: 520px; width: 90%; }
+.upload-steps { text-align: left; background: #000; padding: 16px; border-radius: 8px; margin: 16px 0; border: 1px solid #2a2a2a; }
+.upload-step { display: flex; gap: 12px; padding: 8px 0; color: var(--text-mute); font-size: 13px; }
+.upload-step.active { color: var(--warm-white); }
+.upload-step.done { color: var(--success); }
+.step-icon { width: 24px; height: 24px; border-radius: 50%; background: #222; display: flex; align-items: center; justify-content: center; font-size: 12px; border: 1px solid #444; }
+.progress-bar { height: 8px; background: #222; border-radius: 4px; overflow: hidden; margin: 12px 0; }
+.progress-fill { height: 100%; background: var(--gold); width: 0%; transition: width 0.3s; }
+.upload-detail { background: #000; padding: 10px; font-size: 11px; color: #aaa; text-align: left; max-height: 120px; overflow-y: auto; border-radius: 6px; }
+
+/* 🎓 졸업 모드 */
+body.graduated .panel-left { display: none; }
+body.graduated .tab[data-tab="hint"], body.graduated .tab-body[data-body="hint"] { display: none; }
+body.graduated .layout { grid-template-columns: 1fr 420px; }
+.graduation-banner { display: none; padding: 14px 20px; background: linear-gradient(90deg, rgba(212,175,55,0.15), rgba(92,184,92,0.15)); border-bottom: 1px solid var(--gold); color: var(--gold); font-weight: 700; text-align: center; font-size: 14px; letter-spacing: 0.5px; animation: glow 2.4s ease-in-out infinite; }
+body.graduated .graduation-banner { display: block; }
+@keyframes glow { 0%,100% { box-shadow: inset 0 0 12px rgba(212,175,55,0.2); } 50% { box-shadow: inset 0 0 24px rgba(212,175,55,0.5); } }
+
+/* 🎨 Blockly 카테고리 블랙&골드 오버라이드 */
+.blocklyToolboxDiv { background: var(--charcoal) !important; border-right: 1px solid var(--gold-soft) !important; padding: 6px 0 !important; }
+.blocklyTreeRow { padding: 8px 4px !important; margin: 2px 6px !important; border-radius: 6px !important; transition: all 0.15s !important; }
+.blocklyTreeLabel { color: var(--warm-white) !important; font-size: 13px !important; font-weight: 600 !important; }
+.blocklyTreeRow:hover { background: var(--charcoal-2) !important; box-shadow: inset 0 0 0 1px var(--gold-soft) !important; }
+.blocklyTreeRow:hover .blocklyTreeLabel { color: var(--gold) !important; }
+.blocklyTreeSelected { background: linear-gradient(90deg, var(--gold-soft), var(--gold)) !important; }
+.blocklyTreeSelected .blocklyTreeLabel { color: #000 !important; font-weight: 700 !important; }
+
+/* 데스크톱 기본 상태 햄버거 버튼 숨김 */
+.hamburger-btn { display: none; }
+
+/* 가로/세로 방해하는 안내창을 모든 화면에서 완전히 박멸합니다 */
+#orientationOverlay {
+  display: none !important;
+}
+/* ========================================================
+   🦾 CUBELINK UI 툴박스 메뉴 선택 영역 위치 하향 조정
+   ======================================================== */
+
+/* 1. 카테고리 메뉴 전체를 감싸는 틀의 상단 여백을 주어 마우스 감지 영역을 전체적으로 내립니다 */
+.blocklyToolboxDiv {
+  padding-top: 15px !important; /* 수치(px)를 조절하여 노란 박스 위치를 더 내리거나 올릴 수 있습니다 */
+}
+
+/* 2. 마우스를 올렸을 때 뜨는 노란색 가이드 박스의 물리적 위치와 정렬을 글자 높이에 맞춥니다 */
+.blocklyTreeRow {
+  position: relative !important;
+  top: 0px !important; /* 마우스 반응 영역이 글자보다 위에 있다면 이 값을 5px, 10px 등으로 늘려 아래로 내리세요 */
+  margin: 4px 6px !important;
+  line-height: 24px !important; /* 글자와 박스의 높이 정렬을 맞춥니다 */
+}
+/* ========================================================
+   🎯 [최종 해결] Blockly 카테고리 메뉴 마우스 선택 영역 강제 정렬
+   ======================================================== */
+
+/* 1. 마우스가 올라갔을 때 뜨는 노란색 하이라이트 박스의 물리적 위치를 아래로 강제 하향합니다. */
+.blocklyTreeRow {
+  position: relative !important;
+  /* 💡 현재 글자보다 노란 박스가 한참 위에 있으므로, top 값을 주어 아래로 끌어내립니다.
+      현재 어긋난 높이에 맞춰 20px~40px 사이로 수치를 늘리거나 줄이며 딱 맞춰보세요! */
+  top: 30px !important; 
+  
+  margin: 4px 6px !important;
+  line-height: 26px !important; /* 글자 자체의 행간을 넓혀 마우스 클릭 영역을 널널하게 만듭니다. */
+}
+
+/* 2. 카테고리 글자(텍스트)들의 위치도 노란색 박스와 엇박자 나지 않도록 물리적 기준점을 똑같이 묶어줍니다. */
+.blocklyTreeLabel {
+  position: relative !important;
+  top: 0px !important;
+  vertical-align: middle !important;
+}
+
+/* 3. 전체 툴박스 틀 내부의 상단 여백을 주어, 마우스가 첫 번째 카테고리(기본 구조)를 건드릴 때의 오차를 최종 방어합니다. */
+.blocklyToolboxDiv {
+  padding-top: 10px !important;
+}
+/* ========================================================
+   🦾 [최종 해결] Blockly 툴박스 구성요소 수직 정렬 및 위치 싱크
+   ======================================================== */
+
+/* 1. 쪼개져 있던 행 내부 요소를 한 줄(Flex)로 묶고 강제로 수직 중앙 정렬합니다. */
+.blocklyTreeRow {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  position: relative !important;
+  
+  /* 💡 글자 높이와 박스 감지 범위를 정상 범위로 밀착시킵니다. */
+  height: 36px !important; 
+  padding: 0 8px !important;
+  margin: 4px 6px !important;
+  
+  /* 기존에 혹시 억지로 밀어내기 위해 적었던 top이나 margin 설정이 있다면 완벽히 초기화 */
+  top: 0px !important; 
+}
+
+/* 2. 따로 놀며 위로 솟구쳐 있던 왼쪽 색상 아이콘(바)을 글자 옆 정위치로 강제 하향 고정합니다. */
+.blocklyTreeIcon {
+  margin-right: 8px !important;
+  vertical-align: middle !important;
+  position: static !important; /* 절대좌표로 튀어나가는 것을 차단 */
+}
+
+/* 3. 카테고리 텍스트(글자)가 호버 박스 밖으로 탈출하지 못하도록 정렬을 고정합니다. */
+.blocklyTreeLabel {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  line-height: normal !important;
+  vertical-align: middle !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* 4. 마우스 호버 박스 내부의 여백 오차를 차단하여 마우스 인식 영역을 글자와 1:1로 일치시킵니다. */
+.blocklyTreeRowContentContainer {
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
+}
