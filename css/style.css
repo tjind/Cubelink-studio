@@ -190,6 +190,30 @@ pre.code-out { background: #050505; color: #c8c8c8; padding: 14px; border-radius
 body.graduated .panel-left { display: none; }
 body.graduated .tab[data-tab="hint"], body.graduated .tab-body[data-body="hint"] { display: none; }
 body.graduated .layout { grid-template-columns: 1fr 420px; }
+/* ──────────────────────────────────────────────────────────
+   🎓 졸업 모드 — 시리얼 모니터를 명령어 블록 아래로 이동
+   ────────────────────────────────────────────────────────── */
+body.graduated .panel-center {
+  display: flex;
+  flex-direction: column;
+}
+body.graduated #blocklyArea {
+  height: auto !important;
+  flex: 1;
+  min-height: 0;
+}
+body.graduated #serialMonitorBar {
+  position: static !important;
+  margin-top: 0 !important;
+  border-top: 2px solid var(--gold-soft);
+  height: 200px;
+  flex-shrink: 0;
+  /* panel-center로 옮겨질 것 — JS에서 처리 */
+}
+body.graduated #serialMonitorBar.collapsed {
+  height: 36px;
+}
+
 .graduation-banner { display: none; padding: 14px 20px; background: linear-gradient(90deg, rgba(212,175,55,0.15), rgba(92,184,92,0.15)); border-bottom: 1px solid var(--gold); color: var(--gold); font-weight: 700; text-align: center; font-size: 14px; letter-spacing: 0.5px; animation: glow 2.4s ease-in-out infinite; }
 body.graduated .graduation-banner { display: block; }
 @keyframes glow { 0%,100% { box-shadow: inset 0 0 12px rgba(212,175,55,0.2); } 50% { box-shadow: inset 0 0 24px rgba(212,175,55,0.5); } }

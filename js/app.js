@@ -493,9 +493,30 @@
       setTimeout(() => t.classList.remove('show'), 2800);
     },
 
-    checkGraduation() {
+        checkGraduation() {
       const allDone = this.done.size >= MISSIONS.length;
       document.body.classList.toggle('graduated', allDone);
+
+      // 시리얼 모니터 위치 동적 이동
+      const monitor = document.getElementById('serialMonitorBar');
+      const panelCenter = document.querySelector('.panel-center');
+      const panelLeft = document.querySelector('.panel-left');
+      if (monitor && panelCenter && panelLeft) {
+        if (allDone) {
+          // 졸업 모드: panel-center 하단(명령어 블록 아래)으로 이동
+          if (monitor.parentElement !== panelCenter) {
+            panelCenter.appendChild(monitor);
+            console.log('🎓 시리얼 모니터 → 명령어 블록 아래로 이동');
+          }
+        } else {
+          // 일반 모드: panel-left 하단으로 복귀
+          if (monitor.parentElement !== panelLeft) {
+            panelLeft.appendChild(monitor);
+            console.log('📍 시리얼 모니터 → 미션 패널 하단으로 복귀');
+          }
+        }
+      }
+
       // 졸업 모드 진입 시 Blockly 영역 재계산 + 시뮬 탭으로 자동 전환
       setTimeout(() => {
         if (window.workspace && typeof Blockly.svgResize === 'function') {
@@ -510,6 +531,7 @@
         }
       }
     },
+
 
     reset() {
       this.done.clear();
@@ -1570,7 +1592,28 @@
     });
 
 
-    document.getElementById('btnReload')?.addEventListener('click', () => loadMission(currentMissionId));
+    document.getElementById('btnReload')?.addEventListener('click', () => {
+      if (!currentMissionId) return;
+      if (!confirm('현재 작업을 버리고 미션을 다시 처음부터 시작하시겠습니까?\n(저장된 작업물도 삭제됩니다.)')) return;
+      // 1. 저장본 삭제
+      WorkspaceStorage.clear(currentMissionId);
+      // 2. workspace 초기화 (빈 setup/loop)
+      if (workspace) {
+        workspace.clear();
+        try {
+          const initBlock = workspace.newBlock('arduino_setup_loop');
+          initBlock.initSvg();
+          initBlock.render();
+          initBlock.moveBy(20, 20);
+        } catch (e) {}
+      }
+      // 3. MissionProgress state 초기화 (검증 상태 리셋)
+      if (window.MissionProgress) {
+        MissionProgress.state = {};
+      }
+      setTimeout(triggerResize, 50);
+      console.log('🔄 미션 다시 시작:', currentMissionId);
+    });
 
     document.getElementById('btnClearSerial')?.addEventListener('click', () => {
       const sm = document.getElementById('serialMonitor');
