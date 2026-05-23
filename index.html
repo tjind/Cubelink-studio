@@ -7,27 +7,27 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <link rel="icon" href="data:,">
-  <title>CUBELINK Studio v2.8.1 · The Pinnacle of Robot Education</title>
-<!-- SEO 메타 태그 (검색 엔진 노출용) -->
-<meta name="description" content="CUBELINK Studio - 학생을 위한 무료 로봇팔 블록 코딩 학습 도구. 9단계 미션, 3D 시뮬레이터, 아두이노 실시간 제어를 한 곳에서.">
-<meta name="keywords" content="CUBELINK, 큐브링크, 로봇팔, 블록코딩, 아두이노, 교육, 학생, Blockly, 무료, 코딩 학습">
-<meta name="author" content="tjind">
-<meta name="robots" content="index, follow">
+  <title>CUBELINK Studio v2.8.3 · The Pinnacle of Robot Education</title>
 
-<!-- Open Graph (카카오톡·페이스북 공유 시 미리보기) -->
-<meta property="og:type" content="website">
-<meta property="og:title" content="CUBELINK Studio - 로봇팔 블록 코딩 학습 플랫폼">
-<meta property="og:description" content="9단계 미션으로 배우는 아두이노 로봇팔 코딩. 블록 코딩 + 3D 시뮬레이터 + 실시간 제어.">
-<meta property="og:url" content="https://tjind.github.io/Cubelink-studio/">
-<meta property="og:image" content="https://tjind.github.io/Cubelink-studio/og-image.png">
+  <!-- SEO -->
+  <meta name="description" content="CUBELINK Studio - 학생을 위한 무료 로봇팔 블록 코딩 학습 도구. 9단계 미션, 3D 시뮬레이터, 아두이노 실시간 제어를 한 곳에서.">
+  <meta name="keywords" content="CUBELINK, 큐브링크, 로봇팔, 블록코딩, 아두이노, 교육, 학생, Blockly, 무료, 코딩 학습">
+  <meta name="author" content="tjind">
+  <meta name="robots" content="index, follow">
 
-<!-- Twitter Card -->
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="CUBELINK Studio">
-<meta name="twitter:description" content="학생용 무료 로봇팔 블록 코딩 학습 도구">
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="CUBELINK Studio - 로봇팔 블록 코딩 학습 플랫폼">
+  <meta property="og:description" content="9단계 미션으로 배우는 아두이노 로봇팔 코딩. 블록 코딩 + 3D 시뮬레이터 + 실시간 제어.">
+  <meta property="og:url" content="https://tjind.github.io/Cubelink-studio/">
+  <meta property="og:image" content="https://tjind.github.io/Cubelink-studio/og-image.png">
 
-<!-- Canonical URL (중복 방지) -->
-<link rel="canonical" href="https://tjind.github.io/Cubelink-studio/">
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="CUBELINK Studio">
+  <meta name="twitter:description" content="학생용 무료 로봇팔 블록 코딩 학습 도구">
+
+  <link rel="canonical" href="https://tjind.github.io/Cubelink-studio/">
 
   <script src="libs/blockly/blockly.min.js"></script>
   <script src="libs/blockly/ko.js"></script>
@@ -43,18 +43,22 @@
   <button class="btn hamburger-btn" id="btnHamburger" title="미션 목록 열기/닫기">☰</button>
   <div class="brand">
     <div class="brand-logo">TJ</div>
-    <div class="brand-title">CUBELINK STUDIO<span class="brand-version">v2.8.1</span></div>
+    <div class="brand-title">CUBELINK STUDIO<span class="brand-version">v2.8.3</span></div>
   </div>
-  
+
   <div class="header-actions">
     <span class="progress-badge" id="progressBadge">진행률: 0 / 9</span>
     <button class="btn" id="btnResetProgress" title="모든 미션 완료 기록을 지웁니다">🔄 진행 초기화</button>
-    
-    <button class="btn primary" id="btnConnectInit" style="background: linear-gradient(135deg, #2ecc71, #27ae60) !important; color: white !important; border: 1px solid #27ae60; font-weight: 700;" title="로봇을 연결하고 모든 모터를 90도 차렷 자세로 정렬합니다.">
+
+    <button class="btn primary" id="btnConnectInit"
+      style="background: linear-gradient(135deg, #2ecc71, #27ae60) !important; color: white !important; border: 1px solid #27ae60; font-weight: 700;"
+      title="로봇을 연결하고 모든 모터를 90도 차렷 자세로 정렬합니다.">
       🔌 로봇 연결 및 초기화 (90도)
     </button>
-    
-    <button class="btn primary" id="btnRunRealtime" style="background: linear-gradient(135deg, #D4AF37, #B8941F) !important; color: black !important; font-weight: 700;" title="블록 코드를 OTG로 연결된 로봇팔에서 실시간 실행합니다.">
+
+    <button class="btn primary" id="btnRunRealtime"
+      style="background: linear-gradient(135deg, #D4AF37, #B8941F) !important; color: black !important; font-weight: 700;"
+      title="블록 코드를 OTG로 연결된 로봇팔에서 실시간 실행합니다.">
       ▶ 실시간 실행
     </button>
   </div>
@@ -68,7 +72,7 @@
   <aside class="panel-left">
     <div class="panel-header">🎯 미션 선택</div>
     <div id="missionList"></div>
-    
+
     <div class="serial-monitor-bar" id="serialMonitorBar">
       <div class="serial-monitor-header">
         <span>📡 시리얼 모니터</span>
@@ -78,12 +82,11 @@
         </div>
       </div>
       <div class="serial-monitor-body" id="serialMonitor">시뮬레이션 출력이 여기에 표시됩니다.</div>
-  <div class="serial-monitor-input" id="serialInputBar">
-  <span class="serial-prompt">&gt;</span>
-  <input type="text" id="serialCmdInput" placeholder="로봇에 보낼 시리얼 명령 입력..." autocomplete="off" spellcheck="false">
-  <button class="btn" id="btnSerialSend" style="padding:3px 10px;font-size:11px;">전송</button>
-</div>
-
+      <div class="serial-monitor-input" id="serialInputBar">
+        <span class="serial-prompt">&gt;</span>
+        <input type="text" id="serialCmdInput" placeholder="로봇에 보낼 시리얼 명령 입력..." autocomplete="off" spellcheck="false">
+        <button class="btn" id="btnSerialSend" style="padding:3px 10px;font-size:11px;">전송</button>
+      </div>
     </div>
   </aside>
 
@@ -107,7 +110,7 @@
       <div class="tab" data-tab="sim">🎮 시뮬레이터</div>
       <div class="tab" data-tab="cpp">⚙️ C++ 코드</div>
     </div>
-    
+
     <div class="tab-body active" data-body="hint"><div id="hintPanel">미션을 선택하세요.</div></div>
 
     <div class="tab-body" data-body="sim">
@@ -116,7 +119,7 @@
         <button class="btn" id="btnSimStop">⏹ 정지</button>
         <span class="sim-status" id="simStatus">● 대기 중</span>
       </div>
-      
+
       <div class="sim-stage">
         <div id="robot-3d-view" style="width: 100%; background-color: #0a0a0a; border: 1px solid var(--gold-soft); border-radius: 8px; margin-bottom: 4px; overflow: hidden;"></div>
 
@@ -218,7 +221,7 @@
     <block type="cubelink_delay_sec"></block>
     <block type="cubelink_delay_us"></block>
   </category>
-    <category name="🔁 흐름 제어" colour="#5C81A6">
+  <category name="🔁 흐름 제어" colour="#5C81A6">
     <block type="controls_if"></block>
     <block type="controls_ifelse"></block>
     <block type="cubelink_repeat_n"></block>
@@ -227,8 +230,6 @@
     <block type="math_number"><field name="NUM">0</field></block>
     <block type="math_arithmetic"></block>
   </category>
-
-
   <category name="📦 변수" colour="#A65C81" custom="VARIABLE"></category>
   <category name="📡 시리얼 통신" colour="#27AE60">
     <block type="cubelink_serial_begin"></block>
@@ -269,19 +270,18 @@
 <script src="js/mobile-ui.js"></script>
 <script src="js/app.js"></script>
 
-<script>
-/* ════════════════════════════════════════════════════════════════════
-   CUBELINK Studio v2.8.3 — CH340 + Chromebook 재연결 안정화
-   ────────────────────────────────────────────────────────────────────
-   주요 개선:
-   • USB 분리 시 reader/port 완전 해제 (좀비 객체 방지)
-   • navigator.serial 전역 connect/disconnect 이벤트 청취
-   • 자동 재연결 (USB 재삽입 시 사용자 클릭 불필요)
-   • CH340 드라이버 잠금 대응 — 백오프 재시도 (0.5/1.5/3초)
-   • 좀비 포트 회피 — forget() + 새 권한 요청 fallback
-   • 환경 사전 진단 (HTTPS, 브라우저, Web Serial 지원)
-   ════════════════════════════════════════════════════════════════════ */
 
+<!-- ════════════════════════════════════════════════════════════════
+     CUBELINK Studio v2.8.3 — CH340 + Chromebook 재연결 안정화
+     ──────────────────────────────────────────────────────────────
+     • USB 분리 시 reader/port 완전 해제 (좀비 객체 방지)
+     • navigator.serial 전역 connect/disconnect 이벤트 청취
+     • 자동 재연결 (USB 재삽입 시 사용자 클릭 불필요)
+     • CH340 드라이버 잠금 대응 — 백오프 재시도 (0.5/1.5/3초)
+     • 좀비 포트 회피 — forget() + 새 권한 요청 fallback
+     • 환경 사전 진단 (HTTPS, 브라우저, Web Serial 지원)
+     ════════════════════════════════════════════════════════════════ -->
+<script>
 /* ---------- 조이스틱 설치 방향 보정 설정 ---------- */
 window.joyOrientation = window.joyOrientation || { 1: 'cw90', 2: 'cw90' };
 
@@ -347,7 +347,7 @@ window.parseBoardLine = function(line) {
 
 window._connState = 'idle';
 window._reconnecting = false;
-window._autoReconnect = true;  // USB 재삽입 시 자동 재연결 활성화 여부
+window._autoReconnect = true;
 
 window.setConnectionState = function(state) {
   const btn = document.getElementById('btnConnectInit');
@@ -371,26 +371,16 @@ window.setConnectionState = function(state) {
   btn.style.setProperty('cursor', s.disabled ? 'wait' : 'pointer', 'important');
 };
 
-/* ───────────────────────────────────────────────────────────
-   💎 완전 해제 함수 — USB 분리 시 호출되는 핵심 루틴
-   reader, writer, port를 모두 완벽하게 정리해 좀비 객체 방지
-   ─────────────────────────────────────────────────────────── */
+/* 💎 완전 해제 함수 — 좀비 객체 방지 */
 window.fullCleanup = async function(opts) {
   opts = opts || {};
   window._readerRunning = false;
-
-  // 1) reader 강제 해제
   try { await window._reader?.cancel(); } catch(_){}
   try { window._reader?.releaseLock(); } catch(_){}
   window._reader = null;
-
-  // 2) decoder 해제 (있을 경우)
   await new Promise(r => setTimeout(r, 50));
-
-  // 3) port.close() 명시적 호출 — 가장 중요
   if (window._serialPort) {
     try {
-      // disconnect 핸들러 먼저 제거 (close 중에 또 트리거되지 않도록)
       if (window._disconnectHandler) {
         try { window._serialPort.removeEventListener('disconnect', window._disconnectHandler); } catch(_){}
       }
@@ -400,35 +390,21 @@ window.fullCleanup = async function(opts) {
       console.warn('port.close() 실패 (무시):', e.message);
     }
   }
-
-  // 4) OS 레벨 포트 해제 대기 (CH340 드라이버 안정화)
   await new Promise(r => setTimeout(r, 300));
-
-  // 5) 전역 변수 초기화
   window._serialPort = null;
   window._disconnectHandler = null;
-
   if (!opts.silent) {
     setConnectionState('idle');
     console.log('✅ 완전 해제 완료');
   }
 };
-
-// 하위 호환
 window.stopCubelinkReader = window.fullCleanup;
 
-/* ───────────────────────────────────────────────────────────
-   💎 좀비 포트 회피 헬퍼
-   getPorts()에서 받은 포트가 이미 readable이거나 readable.locked면
-   forget()으로 권한 폐기 후 requestPort()로 새로 받기
-   ─────────────────────────────────────────────────────────── */
+/* 💎 좀비 포트 회피 */
 async function getCleanPort(preferAuto) {
   const ports = await navigator.serial.getPorts();
   let candidate = ports[0] || null;
-
-  // 자동 모드(USB 재삽입 자동 재연결 등)에서는 첫 포트 시도
   if (preferAuto && candidate) {
-    // 좀비 검사: 이미 readable.locked면 폐기 후 새로 요청
     if (candidate.readable && candidate.readable.locked) {
       console.warn('⚠ 좀비 포트 감지 — forget() 후 재요청');
       try { await candidate.forget?.(); } catch(_){}
@@ -437,13 +413,10 @@ async function getCleanPort(preferAuto) {
       return candidate;
     }
   }
-
-  // 사용자 클릭으로 들어온 경우 또는 자동에서 좀비 발생 시
   if (!candidate) {
     try {
       candidate = await navigator.serial.requestPort();
     } catch(e) {
-      // 사용자가 취소를 누름
       if (e.name === 'NotFoundError' || /no port selected/i.test(e.message || '')) {
         throw new Error('USER_CANCELLED');
       }
@@ -453,17 +426,14 @@ async function getCleanPort(preferAuto) {
   return candidate;
 }
 
-/* ───────────────────────────────────────────────────────────
-   💎 백오프 재시도로 port.open() — CH340 드라이버 잠금 대응
-   ─────────────────────────────────────────────────────────── */
+/* 💎 백오프 재시도로 port.open() */
 async function openPortWithBackoff(port) {
-  const delays = [0, 500, 1500, 3000];  // 즉시 → 0.5s → 1.5s → 3s
+  const delays = [0, 500, 1500, 3000];
   let lastErr = null;
   for (let i = 0; i < delays.length; i++) {
     if (delays[i] > 0) await new Promise(r => setTimeout(r, delays[i]));
     try {
       if (port.readable) {
-        // 이미 열려 있으면 일단 닫고 재시도
         console.log(`재시도 ${i}: port가 이미 열려 있어 close 후 재시도`);
         try { await port.close(); } catch(_){}
         await new Promise(r => setTimeout(r, 200));
@@ -474,16 +444,12 @@ async function openPortWithBackoff(port) {
     } catch(e) {
       lastErr = e;
       console.warn(`port.open() 실패 (시도 ${i+1}/${delays.length}): ${e.message}`);
-      // 'already open' 오류는 짧은 대기 후 재시도
-      // 'Failed to open serial port' 오류는 더 긴 대기
     }
   }
   throw lastErr || new Error('port.open() 최종 실패');
 }
 
-/* ───────────────────────────────────────────────────────────
-   💎 메인: 시리얼 리더 시작
-   ─────────────────────────────────────────────────────────── */
+/* 💎 메인: 시리얼 리더 시작 */
 window.startCubelinkReader = async function(port) {
   if (window._readerRunning) { console.log('이미 리더 동작 중 — 무시'); return; }
   setConnectionState('connecting');
@@ -498,7 +464,6 @@ window.startCubelinkReader = async function(port) {
   }
   if (!port) { setConnectionState('idle'); return; }
 
-  // 백오프 재시도로 안정적 open
   try {
     await openPortWithBackoff(port);
   } catch(e) {
@@ -507,7 +472,6 @@ window.startCubelinkReader = async function(port) {
     throw e;
   }
 
-  // DTR/RTS 리셋 (CH340 초기화)
   try {
     await port.setSignals({ dataTerminalReady: false, requestToSend: false });
     await new Promise(r => setTimeout(r, 100));
@@ -515,12 +479,11 @@ window.startCubelinkReader = async function(port) {
   } catch(e) {
     console.warn('setSignals 미지원 (무시 가능):', e.message);
   }
-  await new Promise(r => setTimeout(r, 1500));  // 부트로더 안정화
+  await new Promise(r => setTimeout(r, 1500));
 
   window._serialPort = port;
   window._readerRunning = true;
 
-  // disconnect 핸들러: 완전 해제 후 상태를 lost로
   if (window._disconnectHandler) {
     try { port.removeEventListener('disconnect', window._disconnectHandler); } catch(_){}
   }
@@ -528,8 +491,7 @@ window.startCubelinkReader = async function(port) {
     console.warn('🔌 port.disconnect 이벤트 — 완전 해제 시작');
     setConnectionState('lost');
     await window.fullCleanup({ silent: true });
-    setConnectionState('lost');  // cleanup이 idle로 바꿔도 lost 유지
-    // 자동 재연결은 navigator.serial.connect 이벤트에서 처리
+    setConnectionState('lost');
   };
   port.addEventListener('disconnect', window._disconnectHandler);
 
@@ -568,21 +530,16 @@ window.startCubelinkReader = async function(port) {
   }
 };
 
-/* ───────────────────────────────────────────────────────────
-   💎 환경 사전 진단
-   ─────────────────────────────────────────────────────────── */
+/* 💎 환경 사전 진단 */
 function diagnoseEnvironment() {
   const issues = [];
-  // HTTPS 체크
   const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
   if (location.protocol !== 'https:' && !isLocal) {
     issues.push({ severity:'fatal', msg:'⚠️ HTTPS 주소가 아닙니다. https://tjind.github.io/Cubelink-studio/ 로 접속하세요.' });
   }
-  // Web Serial API 지원
   if (!('serial' in navigator)) {
     issues.push({ severity:'fatal', msg:'⚠️ 이 브라우저는 로봇 연결을 지원하지 않습니다. Chrome 또는 Edge(데스크톱/노트북/Chromebook)를 사용하세요.' });
   }
-  // 모바일 브라우저
   const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   if (isMobile) {
     issues.push({ severity:'warn', msg:'📱 모바일에서는 시뮬레이션만 가능합니다. 실제 로봇 연결은 노트북/데스크톱에서 사용하세요.' });
@@ -607,116 +564,10 @@ function showDiagnosticBanner(issues) {
   document.body.insertBefore(banner, document.body.firstChild);
 }
 
-/* ───────────────────────────────────────────────────────────
-   💎 버튼 클릭 핸들러 + 전역 이벤트
-   ─────────────────────────────────────────────────────────── */
-window.addEventListener('load', () => {
-  // 환경 진단
-  const issues = diagnoseEnvironment();
-  if (issues.length) showDiagnosticBanner(issues);
-
-  // Web Serial 자체가 없으면 아래 로직 다 건너뜀
-  if (!('serial' in navigator)) return;
-
-  const btn = document.getElementById('btnConnectInit');
-  if (btn) {
-    btn.addEventListener('click', async (ev) => {
-      ev.stopImmediatePropagation();
-      ev.preventDefault();
-      const state = window._connState;
-      if (state === 'connecting') { console.log('이미 연결 중'); return; }
-      if (state === 'connected')  { await window.fullCleanup(); return; }
-
-      setConnectionState('connecting');
-      try {
-        // 항상 사전 정리
-        if (window._serialPort || window._reader) {
-          await window.fullCleanup({ silent: true });
-          setConnectionState('connecting');
-        }
-        // 좀비 회피 헬퍼로 깨끗한 포트 획득
-        const port = await getCleanPort(false);
-        await window.startCubelinkReader(port);
-      } catch(e) {
-        if (e.message === 'USER_CANCELLED') { setConnectionState('idle'); return; }
-        console.warn('연결 실패:', e.message);
-        setConnectionState('failed');
-        showConnectionTroubleshoot(e.message);
-      }
-    }, true);
-  }
-
-  // ─── USB 재삽입 자동 재연결 (가장 중요) ───
-  navigator.serial.addEventListener('connect', async (e) => {
-    console.log('🔌 navigator.serial.connect 이벤트:', e.target);
-    if (!window._autoReconnect) return;
-    if (window._connState === 'connected' || window._connState === 'connecting') return;
-
-    // 좀비 객체가 남아있을 수 있으므로 완전 해제 후 새로 시작
-    await window.fullCleanup({ silent: true });
-    setConnectionState('connecting');
-
-    // 보드 부팅 대기
-    await new Promise(r => setTimeout(r, 1500));
-
-    try {
-      // 이번엔 e.target을 직접 사용 (가장 확실)
-      await window.startCubelinkReader(e.target);
-      if (typeof window.showToast === 'function') {
-        window.showToast('✅ USB 자동 재연결됨', 'success', 2500);
-      }
-    } catch(err) {
-      console.warn('자동 재연결 실패:', err.message);
-      // 폴백: 깨끗한 포트로 다시 시도
-      try {
-        await new Promise(r => setTimeout(r, 1000));
-        const port = await getCleanPort(true);
-        await window.startCubelinkReader(port);
-        if (typeof window.showToast === 'function') {
-          window.showToast('✅ 재연결 성공 (2차 시도)', 'success', 2500);
-        }
-      } catch(err2) {
-        console.warn('2차 시도도 실패:', err2.message);
-        setConnectionState('failed');
-      }
-    }
-  });
-
-  // ─── 전역 disconnect 이벤트 (포트 객체 레벨 외에 시스템 레벨도 청취) ───
-  navigator.serial.addEventListener('disconnect', async (e) => {
-    console.warn('🔌 navigator.serial.disconnect 이벤트:', e.target);
-    setConnectionState('lost');
-    await window.fullCleanup({ silent: true });
-    setConnectionState('lost');
-    if (typeof window.showToast === 'function') {
-      window.showToast('⚠️ USB 분리됨 — 재삽입을 기다리는 중', 'warn', 3000);
-    }
-  });
-
-  // ─── 페이지 로드 시 자동 연결 (이전 권한 받은 포트가 있으면) ───
-  (async () => {
-    await new Promise(r => setTimeout(r, 500));
-    try {
-      const ports = await navigator.serial.getPorts();
-      if (ports.length > 0) {
-        console.log('승인된 포트 발견 — 자동 연결 시도');
-        await window.startCubelinkReader(ports[0]);
-      }
-    } catch(e) {
-      console.warn('자동 연결 실패:', e.message);
-    }
-  })();
-});
-
-/* ───────────────────────────────────────────────────────────
-   💎 연결 실패 시 단계별 안내 모달
-   ─────────────────────────────────────────────────────────── */
+/* 💎 연결 실패 안내 모달 */
 function showConnectionTroubleshoot(errorMsg) {
-  // 기존 모달이 있으면 제거
   const old = document.getElementById('cubelinkTroubleshoot');
   if (old) old.remove();
-
-  // 에러 패턴에 따라 안내 우선순위 조정
   const lowerErr = (errorMsg || '').toLowerCase();
   let primaryHint = '';
   if (lowerErr.includes('already open') || lowerErr.includes('failed to open')) {
@@ -726,7 +577,6 @@ function showConnectionTroubleshoot(errorMsg) {
   } else if (lowerErr.includes('access denied') || lowerErr.includes('permission')) {
     primaryHint = '💡 권한 거부. Chromebook이라면 학교 관리자에게 시리얼 정책 허용을 요청하세요.';
   }
-
   const modal = document.createElement('div');
   modal.id = 'cubelinkTroubleshoot';
   modal.style.cssText = `
@@ -757,7 +607,6 @@ function showConnectionTroubleshoot(errorMsg) {
       </div>
     </div>`;
   document.body.appendChild(modal);
-
   modal.querySelector('#ctsClose').onclick = () => modal.remove();
   modal.querySelector('#ctsRetry').onclick = async () => {
     modal.remove();
@@ -766,9 +615,96 @@ function showConnectionTroubleshoot(errorMsg) {
 }
 window.showConnectionTroubleshoot = showConnectionTroubleshoot;
 
-/* ───────────────────────────────────────────────────────────
-   💎 Blockly 리사이즈
-   ─────────────────────────────────────────────────────────── */
+/* 💎 버튼 클릭 핸들러 + 전역 이벤트 */
+window.addEventListener('load', () => {
+  const issues = diagnoseEnvironment();
+  if (issues.length) showDiagnosticBanner(issues);
+  if (!('serial' in navigator)) return;
+
+  const btn = document.getElementById('btnConnectInit');
+  if (btn) {
+    btn.addEventListener('click', async (ev) => {
+      ev.stopImmediatePropagation();
+      ev.preventDefault();
+      const state = window._connState;
+      if (state === 'connecting') { console.log('이미 연결 중'); return; }
+      if (state === 'connected')  { await window.fullCleanup(); return; }
+
+      setConnectionState('connecting');
+      try {
+        if (window._serialPort || window._reader) {
+          await window.fullCleanup({ silent: true });
+          setConnectionState('connecting');
+        }
+        const port = await getCleanPort(false);
+        await window.startCubelinkReader(port);
+      } catch(e) {
+        if (e.message === 'USER_CANCELLED') { setConnectionState('idle'); return; }
+        console.warn('연결 실패:', e.message);
+        setConnectionState('failed');
+        showConnectionTroubleshoot(e.message);
+      }
+    }, true);
+  }
+
+  /* USB 재삽입 자동 재연결 (핵심) */
+  navigator.serial.addEventListener('connect', async (e) => {
+    console.log('🔌 navigator.serial.connect 이벤트:', e.target);
+    if (!window._autoReconnect) return;
+    if (window._connState === 'connected' || window._connState === 'connecting') return;
+
+    await window.fullCleanup({ silent: true });
+    setConnectionState('connecting');
+    await new Promise(r => setTimeout(r, 1500));
+
+    try {
+      await window.startCubelinkReader(e.target);
+      if (typeof window.showToast === 'function') {
+        window.showToast('✅ USB 자동 재연결됨', 'success', 2500);
+      }
+    } catch(err) {
+      console.warn('자동 재연결 실패:', err.message);
+      try {
+        await new Promise(r => setTimeout(r, 1000));
+        const port = await getCleanPort(true);
+        await window.startCubelinkReader(port);
+        if (typeof window.showToast === 'function') {
+          window.showToast('✅ 재연결 성공 (2차 시도)', 'success', 2500);
+        }
+      } catch(err2) {
+        console.warn('2차 시도도 실패:', err2.message);
+        setConnectionState('failed');
+      }
+    }
+  });
+
+  /* 전역 disconnect 이벤트 */
+  navigator.serial.addEventListener('disconnect', async (e) => {
+    console.warn('🔌 navigator.serial.disconnect 이벤트:', e.target);
+    setConnectionState('lost');
+    await window.fullCleanup({ silent: true });
+    setConnectionState('lost');
+    if (typeof window.showToast === 'function') {
+      window.showToast('⚠️ USB 분리됨 — 재삽입을 기다리는 중', 'warn', 3000);
+    }
+  });
+
+  /* 페이지 로드 시 자동 연결 */
+  (async () => {
+    await new Promise(r => setTimeout(r, 500));
+    try {
+      const ports = await navigator.serial.getPorts();
+      if (ports.length > 0) {
+        console.log('승인된 포트 발견 — 자동 연결 시도');
+        await window.startCubelinkReader(ports[0]);
+      }
+    } catch(e) {
+      console.warn('자동 연결 실패:', e.message);
+    }
+  })();
+});
+
+/* Blockly 리사이즈 */
 window.addEventListener('load', () => {
   const triggerResize = () => {
     let ws = window.workspace || (typeof Blockly !== 'undefined' ? Blockly.mainWorkspace : null);
@@ -786,10 +722,10 @@ window.addEventListener('load', () => {
 </script>
 
 
+<!-- ════════════════════════════════════════════════════════════════
+     v2.8.0 — 인터랙티브 조이스틱 + D2 푸시버튼 시뮬레이션
+     ════════════════════════════════════════════════════════════════ -->
 <script>
-/* ════════════════════════════════════════════════════════════════════
-   v2.8.0 3단계 — 인터랙티브 조이스틱 + D2 푸시버튼 시뮬레이션
-   ════════════════════════════════════════════════════════════════════ */
 (function() {
   'use strict';
 
@@ -799,10 +735,7 @@ window.addEventListener('load', () => {
     const label = document.getElementById(labelId);
     const swEl  = document.getElementById(swStateId);
     const btnR  = document.getElementById(resetBtnId);
-    if (!pad || !dot) {
-      console.warn('⚠ 조이스틱 요소 없음:', padId, dotId);
-      return null;
-    }
+    if (!pad || !dot) { console.warn('⚠ 조이스틱 요소 없음:', padId, dotId); return null; }
 
     const state = { x: 512, y: 512, sw: 0, dragging: false };
 
@@ -853,13 +786,11 @@ window.addEventListener('load', () => {
       const p = pointerToNormalized(e.clientX, e.clientY);
       updatePosition(p.dx, p.dy);
     });
-
     pad.addEventListener('pointermove', (e) => {
       if (!state.dragging) return;
       const p = pointerToNormalized(e.clientX, e.clientY);
       updatePosition(p.dx, p.dy);
     });
-
     const release = () => {
       if (!state.dragging) return;
       state.dragging = false;
@@ -876,9 +807,7 @@ window.addEventListener('load', () => {
       setSwitch(false);
     }
     if (btnR) btnR.addEventListener('click', reset);
-
     commitToGlobal();
-
     return { getX:()=>state.x, getY:()=>state.y, getSW:()=>state.sw, reset, side:sideKey };
   }
 
@@ -887,26 +816,20 @@ window.addEventListener('load', () => {
     if (!btn) { setTimeout(bindD2Button, 500); return; }
     if (btn.dataset.bound === '1') return;
     btn.dataset.bound = '1';
-
     const stateEl = document.getElementById('btnD2State');
-
     const press = () => {
-      if (!window.joystickData) {
-        window.joystickData = { left:{x:500,y:500,sw:0}, right:{x:500,y:500,sw:0} };
-      }
+      if (!window.joystickData) window.joystickData = { left:{x:500,y:500,sw:0}, right:{x:500,y:500,sw:0} };
       window.joystickData.left.sw = 1;
       btn.style.background = '#d4af37';
       btn.style.color = '#000';
       if (stateEl) stateEl.textContent = '상태: LOW (0)';
     };
-
     const release = () => {
       if (window.joystickData?.left) window.joystickData.left.sw = 0;
       btn.style.background = '#444';
       btn.style.color = '#fff';
       if (stateEl) stateEl.textContent = '상태: HIGH (1)';
     };
-
     btn.addEventListener('mousedown',  press);
     btn.addEventListener('mouseup',    release);
     btn.addEventListener('mouseleave', release);
@@ -925,10 +848,7 @@ window.addEventListener('load', () => {
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      initJoyPads();
-      bindD2Button();
-    });
+    document.addEventListener('DOMContentLoaded', () => { initJoyPads(); bindD2Button(); });
   } else {
     initJoyPads();
     bindD2Button();
@@ -943,15 +863,15 @@ window.addEventListener('load', () => {
     }, 150);
   });
 
-  console.log('🎮 v2.8.1 인터랙티브 조이스틱 시뮬 로드됨');
+  console.log('🎮 v2.8.3 인터랙티브 조이스틱 시뮬 로드됨');
 })();
 </script>
 
+
+<!-- ════════════════════════════════════════════════════════════════
+     v2.8.1 — 페이지 로드 후 자동 화면 맞춤 (3회 반복 트리거)
+     ════════════════════════════════════════════════════════════════ -->
 <script>
-/* ════════════════════════════════════════════════════════════════════
-   v2.8.1 — 페이지 로드 후 자동 화면 맞춤 (3회 반복 트리거)
-   브라우저 창에 정확히 들어맞도록 Blockly 영역을 재계산
-   ════════════════════════════════════════════════════════════════════ */
 (function() {
   function fitToViewport() {
     window.dispatchEvent(new Event('resize'));
@@ -959,24 +879,21 @@ window.addEventListener('load', () => {
       Blockly.svgResize(window.workspace);
     }
   }
-  // 초기 로딩 직후, 그리고 200ms / 600ms / 1200ms에 재조정
-  // (3D 모델 로딩, 폰트, 이미지 등이 느리게 들어오는 경우 대비)
   window.addEventListener('load', () => {
     fitToViewport();
     setTimeout(fitToViewport, 200);
     setTimeout(fitToViewport, 600);
     setTimeout(fitToViewport, 1200);
   });
-  // 창 크기 변경 시 즉시 반응
   window.addEventListener('resize', fitToViewport);
 })();
 </script>
+
+
+<!-- ════════════════════════════════════════════════════════════════
+     v2.8.1 — 플라이아웃 드롭다운 활성화 패치 (Blockly v9+)
+     ════════════════════════════════════════════════════════════════ -->
 <script>
-/* ════════════════════════════════════════════════════════════════════
-   v2.8.1 — 플라이아웃 드롭다운 활성화 패치 (Blockly v9+ 대응)
-   최신 Blockly는 Gesture 시스템으로 플라이아웃 클릭을 처리하므로
-   pointerdown 단계에서 필드 클릭을 가로채 드롭다운 에디터를 직접 호출.
-   ════════════════════════════════════════════════════════════════════ */
 (function() {
   'use strict';
   let patched = false;
@@ -987,22 +904,16 @@ window.addEventListener('load', () => {
   }
 
   function findFieldFromTarget(target) {
-    // 클릭한 SVG 요소에서 부모를 따라 올라가며 Blockly Field를 찾음
     let el = target;
     while (el && el !== document) {
-      // Field SVG 그룹은 보통 'blocklyEditableText' 또는 'blocklyDropdown' 클래스
       const cls = (el.getAttribute && el.getAttribute('class')) || '';
-      if (cls.includes('blocklyEditableText') ||
-          cls.includes('blocklyDropdown')) {
-        return el;
-      }
+      if (cls.includes('blocklyEditableText') || cls.includes('blocklyDropdown')) return el;
       el = el.parentNode;
     }
     return null;
   }
 
   function findFieldInWorkspace(svgElement) {
-    // Blockly의 모든 워크스페이스를 뒤져 해당 SVG에 연결된 Field 객체 찾기
     const allWs = (typeof Blockly.getAllWorkspaces === 'function')
       ? Blockly.getAllWorkspaces()
       : (Blockly.Workspace && Blockly.Workspace.getAll ? Blockly.Workspace.getAll() : []);
@@ -1013,9 +924,7 @@ window.addEventListener('load', () => {
         for (const input of block.inputList) {
           for (const field of input.fieldRow) {
             const root = field.getSvgRoot && field.getSvgRoot();
-            if (root && (root === svgElement || root.contains(svgElement))) {
-              return field;
-            }
+            if (root && (root === svgElement || root.contains(svgElement))) return field;
           }
         }
       }
@@ -1024,40 +933,26 @@ window.addEventListener('load', () => {
   }
 
   function onPointerDownCapture(e) {
-    // 플라이아웃 안에서 발생한 이벤트만 처리
     const flyoutEl = e.target.closest && e.target.closest('.blocklyFlyout');
     if (!flyoutEl) return;
-
     const fieldSvg = findFieldFromTarget(e.target);
-    if (!fieldSvg) return;  // 필드가 아닌 일반 블록 영역 클릭
-
+    if (!fieldSvg) return;
     const field = findFieldInWorkspace(fieldSvg);
     if (!field) return;
-
-    // 드롭다운/숫자 입력 등 편집 가능한 필드만 동작
     const isDropdown = field.constructor && field.constructor.name === 'FieldDropdown';
     const isEditable = typeof field.showEditor_ === 'function';
     if (!isDropdown && !isEditable) return;
-
-    // 드래그를 막고 에디터 즉시 호출
     e.stopImmediatePropagation();
     e.preventDefault();
-    try {
-      field.showEditor_(e);
-    } catch(err) {
-      try { field.showEditor_(); } catch(err2) {
-        console.warn('필드 에디터 호출 실패:', err2.message);
-      }
+    try { field.showEditor_(e); }
+    catch(err) {
+      try { field.showEditor_(); } catch(err2) { console.warn('필드 에디터 호출 실패:', err2.message); }
     }
   }
 
   function applyPatch() {
     if (patched) return;
-    if (typeof Blockly === 'undefined') {
-      setTimeout(applyPatch, 300);
-      return;
-    }
-    // capture 단계에서 가로채야 Blockly Gesture가 잡기 전에 처리됨
+    if (typeof Blockly === 'undefined') { setTimeout(applyPatch, 300); return; }
     document.addEventListener('pointerdown', onPointerDownCapture, true);
     document.addEventListener('mousedown',   onPointerDownCapture, true);
     document.addEventListener('touchstart',  onPointerDownCapture, true);
@@ -1073,26 +968,25 @@ window.addEventListener('load', () => {
 })();
 </script>
 
+
+<!-- ════════════════════════════════════════════════════════════════
+     v2.8.2 — 동작 모드 시스템 + 시리얼 명령어 인터프리터
+     ──────────────────────────────────────────────────────────────
+     모드: real(실물만) / sim(그래픽만) / twin(디지털 트윈)
+     기본 모드: 버튼이 결정 (시뮬레이션 시작=sim, 실시간 실행=real)
+     히든 명령: 시리얼 입력창에 비밀 단어 입력 시 트윈 모드 해금
+     해제 유지: 세션만 (새로고침 시 다시 잠금)
+     ════════════════════════════════════════════════════════════════ -->
 <script>
-/* ════════════════════════════════════════════════════════════════════
-   v2.8.2 — 동작 모드 시스템 + 시리얼 명령어 인터프리터
-   ════════════════════════════════════════════════════════════════════
-   모드: real(실물만) / sim(그래픽만) / twin(디지털 트윈)
-   기본 모드: 버튼이 결정 (시뮬레이션 시작=sim, 실시간 실행=real)
-   히든 명령: 시리얼 입력창에 비밀 단어 입력 시 트윈 모드 해금
-   해제 유지: 세션만 (새로고침 시 다시 잠금)
-   ════════════════════════════════════════════════════════════════════ */
 (function() {
   'use strict';
 
-  // ─── 모드 상태 ──────────────────────────────────────────
-  window.actionMode = window.actionMode || 'real';     // 현재 활성 모드
-  window.twinUnlocked = false;                         // 디지털 트윈 해금 여부
+  window.actionMode = window.actionMode || 'real';
+  window.twinUnlocked = false;
 
   window.shouldSendToRobot   = () => window.actionMode === 'real' || window.actionMode === 'twin';
   window.shouldUpdateGraphic = () => window.actionMode === 'sim'  || window.actionMode === 'twin';
 
-  // ─── 토스트 알림 ────────────────────────────────────────
   window.showToast = function(message, type, duration) {
     type = type || 'info';
     duration = duration || 2500;
@@ -1110,7 +1004,6 @@ window.addEventListener('load', () => {
     }, duration);
   };
 
-  // ─── 실시간 실행 버튼 외관 갱신 ──────────────────────────
   function updateRunButton() {
     const btn = document.getElementById('btnRunRealtime');
     if (!btn) return;
@@ -1131,7 +1024,6 @@ window.addEventListener('load', () => {
     }
   }
 
-  // ─── 모드 변경 ──────────────────────────────────────────
   window.setActionMode = function(mode, opts) {
     opts = opts || {};
     if (!['real','sim','twin'].includes(mode)) return false;
@@ -1149,43 +1041,33 @@ window.addEventListener('load', () => {
     return true;
   };
 
-  // ─── 시뮬레이션 시작 / 실시간 실행 버튼이 모드를 결정 ──
   function bindRunButtons() {
     const btnSim = document.getElementById('btnSimStart');
     const btnRun = document.getElementById('btnRunRealtime');
-
-    // 시뮬레이션 시작 → 그래픽만 모드
     if (btnSim && btnSim.dataset.modeBound !== '1') {
       btnSim.dataset.modeBound = '1';
-      btnSim.addEventListener('click', () => {
-        window.setActionMode('sim', { silent: false });
-      }, true);  // capture 단계에서 모드만 먼저 설정
+      btnSim.addEventListener('click', () => { window.setActionMode('sim', { silent:false }); }, true);
     }
-
-    // 실시간 실행 → 트윈 잠금 해제 시엔 twin, 아니면 real
     if (btnRun && btnRun.dataset.modeBound !== '1') {
       btnRun.dataset.modeBound = '1';
       btnRun.addEventListener('click', () => {
         const target = window.twinUnlocked ? 'twin' : 'real';
-        window.setActionMode(target, { silent: false });
+        window.setActionMode(target, { silent:false });
       }, true);
     }
   }
 
-  // ─── 트윈 잠금 해제 ─────────────────────────────────────
   window.unlockTwinMode = function() {
     if (window.twinUnlocked) {
       window.showToast('이미 디지털 트윈이 활성화되어 있습니다', 'info');
       return;
     }
     window.twinUnlocked = true;
-    window.setActionMode('twin', { silent: true });
+    window.setActionMode('twin', { silent:true });
     window.showToast('✨ 디지털 트윈 모드 활성화 — 실물 + 그래픽 동시 동작', 'success', 3500);
     console.log('🎉 디지털 트윈 모드 잠금 해제됨');
   };
 
-  // ─── 시리얼 명령어 인터프리터 ───────────────────────────
-  // 정답 단어들 (대소문자/공백 무시)
   const SECRET_TWIN = ['디지털트윈', 'twin', '트윈', 'digitaltwin', 'digital twin'];
   const CMD_REAL    = ['실물만', 'real', '실물', 'robot'];
   const CMD_SIM     = ['그래픽만', 'sim', '그래픽', 'graphic', 'simulation'];
@@ -1193,9 +1075,7 @@ window.addEventListener('load', () => {
   const CMD_HELP    = ['help', '도움말', '?'];
   const CMD_VERSION = ['version', '버전', 'ver'];
 
-  function normalize(s) {
-    return String(s || '').trim().toLowerCase().replace(/\s+/g, '');
-  }
+  function normalize(s) { return String(s || '').trim().toLowerCase().replace(/\s+/g, ''); }
   function matches(input, list) {
     const n = normalize(input);
     return list.some(w => normalize(w) === n);
@@ -1215,17 +1095,13 @@ window.addEventListener('load', () => {
 
   function handleCommand(cmd) {
     if (!cmd) return;
-    const display = '> ' + cmd;
-    appendToMonitor(display, '#D4AF37');
+    appendToMonitor('> ' + cmd, '#D4AF37');
 
-    // 1) 트윈 잠금 해제 (히든)
     if (matches(cmd, SECRET_TWIN)) {
       window.unlockTwinMode();
       appendToMonitor('✓ 디지털 트윈 모드 해제됨', '#2ecc71');
       return;
     }
-
-    // 2) 모드 직접 전환 (트윈 외엔 누구나 사용 가능)
     if (matches(cmd, CMD_REAL)) {
       window.setActionMode('real');
       appendToMonitor('✓ 실물 전용 모드', '#2ecc71');
@@ -1236,17 +1112,13 @@ window.addEventListener('load', () => {
       appendToMonitor('✓ 그래픽 전용 모드', '#2ecc71');
       return;
     }
-
-    // 3) 초기화 (트윈 잠금)
     if (matches(cmd, CMD_RESET)) {
       window.twinUnlocked = false;
-      window.setActionMode('real', { silent: true });
+      window.setActionMode('real', { silent:true });
       appendToMonitor('✓ 모드 초기화 — 실물 전용으로 복귀', '#3498db');
       window.showToast('🔒 모드 초기화', 'info');
       return;
     }
-
-    // 4) 도움말 (비밀 명령은 표시 안 함)
     if (matches(cmd, CMD_HELP)) {
       appendToMonitor('─── 사용 가능 명령 ───', '#D4AF37');
       appendToMonitor('  real / 실물만     — 실물 로봇 전용', '#888');
@@ -1255,24 +1127,19 @@ window.addEventListener('load', () => {
       appendToMonitor('  version / 버전    — 현재 버전 표시', '#888');
       return;
     }
-
-    // 5) 버전
     if (matches(cmd, CMD_VERSION)) {
-      appendToMonitor('CUBELINK Studio v2.8.2', '#3498db');
+      appendToMonitor('CUBELINK Studio v2.8.3', '#3498db');
       return;
     }
 
-    // 6) 그 외 — 실 로봇으로 시리얼 전송 (정상 사용자 케이스)
     if (window._serialPort && window._serialPort.writable) {
-      window.sendToRobot ? window.sendToRobot(cmd + '\n')
-                         : sendRawToRobot(cmd + '\n');
+      window.sendToRobot ? window.sendToRobot(cmd + '\n') : sendRawToRobot(cmd + '\n');
       appendToMonitor('→ 로봇으로 전송: ' + cmd, '#888');
     } else {
       appendToMonitor('알 수 없는 명령: ' + cmd, '#e74c3c');
     }
   }
 
-  // 실 로봇 전송 헬퍼 (모드에 따라 차단)
   window.sendToRobot = async function(text) {
     if (!window.shouldSendToRobot()) {
       console.log('🚫 실물 전송 차단 (' + window.actionMode + '):', text.trim());
@@ -1297,30 +1164,23 @@ window.addEventListener('load', () => {
     } catch(e) {}
   }
 
-  // ─── 입력창 바인딩 ──────────────────────────────────────
   function bindCommandInput() {
     const input = document.getElementById('serialCmdInput');
     const sendBtn = document.getElementById('btnSerialSend');
     if (!input || input.dataset.bound === '1') return;
     input.dataset.bound = '1';
-
     const submit = () => {
       const v = input.value.trim();
       if (!v) return;
       input.value = '';
       handleCommand(v);
     };
-
     input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        submit();
-      }
+      if (e.key === 'Enter') { e.preventDefault(); submit(); }
     });
     if (sendBtn) sendBtn.addEventListener('click', submit);
   }
 
-  // ─── parseBoardLine 모드 라우팅 (실물→그래픽 차단) ──────
   function patchParseBoardLine() {
     if (typeof window.parseBoardLine !== 'function') {
       setTimeout(patchParseBoardLine, 300);
@@ -1331,24 +1191,20 @@ window.addEventListener('load', () => {
     window.parseBoardLine = function(line) {
       if (!line) return;
       const head = String(line).trim().split(',')[0];
-      // 그래픽 갱신용 메시지: 실물만 모드일 때 차단
       const graphicMsgs = ['A', 'J1', 'J2', 'U'];
-      if (graphicMsgs.includes(head) && !window.shouldUpdateGraphic()) {
-        return;  // 실물만 모드 → 그래픽 무시
-      }
+      if (graphicMsgs.includes(head) && !window.shouldUpdateGraphic()) return;
       return origParse.call(this, line);
     };
     window.parseBoardLine._modeWrapped = true;
     console.log('✅ parseBoardLine 모드 라우팅 적용');
   }
 
-  // ─── 초기화 ─────────────────────────────────────────────
   function init() {
     bindRunButtons();
     bindCommandInput();
     patchParseBoardLine();
     updateRunButton();
-    console.log('🔀 v2.8.2 동작 모드 + 명령어 시스템 로드됨 (기본: real)');
+    console.log('🔀 v2.8.3 동작 모드 + 명령어 시스템 로드됨 (기본: real)');
     console.log('💡 강사용: 시리얼 모니터 입력창에 비밀 단어를 입력하면 디지털 트윈 해제');
   }
 
