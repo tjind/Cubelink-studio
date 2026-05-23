@@ -212,17 +212,16 @@
     <block type="cubelink_delay_sec"></block>
     <block type="cubelink_delay_us"></block>
   </category>
-  <category name="🔁 흐름 제어" colour="#5C81A6">
+    <category name="🔁 흐름 제어" colour="#5C81A6">
     <block type="controls_if"></block>
     <block type="controls_ifelse"></block>
     <block type="cubelink_repeat_n"></block>
     <block type="logic_compare"></block>
     <block type="logic_operation"></block>
-    <block type="logic_negate"></block>
-    <block type="logic_boolean"></block>
     <block type="math_number"><field name="NUM">0</field></block>
     <block type="math_arithmetic"></block>
   </category>
+
 
   <category name="📦 변수" colour="#A65C81" custom="VARIABLE"></category>
   <category name="📡 시리얼 통신" colour="#27AE60">
@@ -765,6 +764,91 @@ window.addEventListener('load', () => {
   });
   // 창 크기 변경 시 즉시 반응
   window.addEventListener('resize', fitToViewport);
+})();
+</script>
+<script>
+/* ════════════════════════════════════════════════════════════════════
+   v2.8.1 — 플라이아웃(툴박스 미리보기) 내부에서도 드롭다운 조작 허용
+   기본 Blockly는 플라이아웃 블록을 비활성화 처리하여 드롭다운 클릭이 막힘.
+   아래 패치는 플라이아웃 안의 블록도 클릭/드롭다운이 가능하도록 풀어줌.
+   ════════════════════════════════════════════════════════════════════ */
+(function() {
+  function patchFlyoutDropdowns() {
+    if (typeof Blockly === 'undefined' || !Blockly.Flyout) {
+      setTimeout(patchFlyoutDropdowns, 300);
+      return;
+    }
+
+    // 플라이아웃 내부 블록이 "비활성화 모드"로 렌더링되지 않도록 패치
+    if (Blockly.BlockSvg && Blockly.BlockSvg.prototype) {
+      const origIsInFlyout = Object.getOwnPropertyDescriptor(
+        Blockly.BlockSvg.prototype, 'isInFlyout'
+      );
+      // 일부 버전은 getter, 일부는 일반 속성이므로 안전 처리
+    }
+
+    // 핵심: 플라이아웃 블록의 마우스 다운 핸들러를 가로채서
+    // 필드(드롭다운/입력)를 클릭했을 때는 드래그 시작 대신 필드 동작 실행
+    const flyoutProto = Blockly.Flyout.prototype;
+    if (flyoutProto && !flyoutProto._cubelinkDropdownPatched) {
+      flyoutProto._cubelinkDropdownPatched = true;
+
+      const origBlockMouseDown = flyoutProto.blockMouseDown_;
+      flyoutProto.blockMouseDown_ = function(block) {
+        const wrapped = origBlockMouseDown.call(this, block);
+        return function(e) {
+          // 클릭한 대상이 필드(드롭다운 텍스트/화살표)인지 확인
+          let target = e.target;
+          let isField = false;
+          while (target && target !== block.svgGroup_) {
+            const cls = target.getAttribute && target.getAttribute('class');
+            if (cls && (
+              cls.includes('blocklyEditableText') ||
+              cls.includes('blocklyDropdownText') ||
+              cls.includes('blocklyText') && target.closest('.blocklyEditableText')
+            )) {
+              isField = true;
+              break;
+            }
+            target = target.parentNode;
+          }
+
+          if (isField) {
+            // 필드 클릭 → 드래그/복제 막고 드롭다운 열기
+            e.stopPropagation();
+            e.preventDefault();
+            // 클릭한 필드를 찾아서 showEditor 호출
+            for (const input of block.inputList) {
+              for (const field of input.fieldRow) {
+                if (field.SERIALIZABLE && (
+                    field instanceof Blockly.FieldDropdown ||
+                    field.constructor.name === 'FieldDropdown'
+                )) {
+                  const bbox = field.getSvgRoot && field.getSvgRoot().getBoundingClientRect();
+                  if (bbox &&
+                      e.clientX >= bbox.left && e.clientX <= bbox.right &&
+                      e.clientY >= bbox.top  && e.clientY <= bbox.bottom) {
+                    field.showEditor_();
+                    return;
+                  }
+                }
+              }
+            }
+            return;
+          }
+          // 일반 영역 클릭 → 기존 동작(드래그하여 작업공간으로 복제)
+          wrapped.call(this, e);
+        };
+      };
+      console.log('✅ 플라이아웃 드롭다운 패치 적용');
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => setTimeout(patchFlyoutDropdowns, 500));
+  } else {
+    setTimeout(patchFlyoutDropdowns, 500);
+  }
 })();
 </script>
 
