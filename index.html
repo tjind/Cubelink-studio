@@ -8,6 +8,26 @@
   <meta name="mobile-web-app-capable" content="yes">
   <link rel="icon" href="data:,">
   <title>CUBELINK Studio v2.8.1 · The Pinnacle of Robot Education</title>
+<!-- SEO 메타 태그 (검색 엔진 노출용) -->
+<meta name="description" content="CUBELINK Studio - 학생을 위한 무료 로봇팔 블록 코딩 학습 도구. 9단계 미션, 3D 시뮬레이터, 아두이노 실시간 제어를 한 곳에서.">
+<meta name="keywords" content="CUBELINK, 큐브링크, 로봇팔, 블록코딩, 아두이노, 교육, 학생, Blockly, 무료, 코딩 학습">
+<meta name="author" content="tjind">
+<meta name="robots" content="index, follow">
+
+<!-- Open Graph (카카오톡·페이스북 공유 시 미리보기) -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="CUBELINK Studio - 로봇팔 블록 코딩 학습 플랫폼">
+<meta property="og:description" content="9단계 미션으로 배우는 아두이노 로봇팔 코딩. 블록 코딩 + 3D 시뮬레이터 + 실시간 제어.">
+<meta property="og:url" content="https://tjind.github.io/Cubelink-studio/">
+<meta property="og:image" content="https://tjind.github.io/Cubelink-studio/og-image.png">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="CUBELINK Studio">
+<meta name="twitter:description" content="학생용 무료 로봇팔 블록 코딩 학습 도구">
+
+<!-- Canonical URL (중복 방지) -->
+<link rel="canonical" href="https://tjind.github.io/Cubelink-studio/">
 
   <script src="libs/blockly/blockly.min.js"></script>
   <script src="libs/blockly/ko.js"></script>
@@ -92,7 +112,7 @@
       </div>
       
       <div class="sim-stage">
-        <div id="robot-3d-view" style="width: 100%; height: 280px; background-color: #0a0a0a; border: 1px solid var(--gold-soft); border-radius: 8px; margin-bottom: 4px; overflow: hidden;"></div>
+        <div id="robot-3d-view" style="width: 100%; background-color: #0a0a0a; border: 1px solid var(--gold-soft); border-radius: 8px; margin-bottom: 4px; overflow: hidden;"></div>
 
         <div class="sim-row">
           <div id="led13" class="led"></div>
@@ -247,8 +267,8 @@
 
 /* ---------- 조이스틱 설치 방향 보정 설정 ---------- */
 window.joyOrientation = window.joyOrientation || {
-  1: 'cw90',   // 조이스틱 1 (왼쪽, A0/A1/D2) — 시계방향 90도 설치됨
-  2: 'cw90'    // 조이스틱 2 (오른쪽, A2/A3/D7)
+  1: 'cw90',
+  2: 'cw90'
 };
 
 function applyJoyOrientation(which, rawX, rawY) {
@@ -264,10 +284,8 @@ function applyJoyOrientation(which, rawX, rawY) {
   return { x, y };
 }
 
-/* ---------- 조이스틱 UI (보정 통합) ---------- */
 window.updateJoystickUI = function(which, rawX, rawY, sw) {
   const { x, y } = applyJoyOrientation(which, rawX, rawY);
-
   const pad = document.getElementById(`joyPad${which}`);
   const dot = document.getElementById(`joyDot${which}`);
   if (!pad || !dot) return;
@@ -300,7 +318,6 @@ window.updateJoystickUI = function(which, rawX, rawY, sw) {
   }
 };
 
-/* ---------- 초음파 UI ---------- */
 window.updateUltrasonicUI = function(cm) {
   const d = Math.max(0, Math.min(999, cm));
   const sliderVal = Math.max(0, Math.min(100, cm));
@@ -313,7 +330,6 @@ window.updateUltrasonicUI = function(cm) {
   if (usValue) usValue.textContent = d;
 };
 
-/* ---------- 시리얼 라인 디스패처 ---------- */
 window.parseBoardLine = function(line) {
   if (!line) return;
   const s = String(line).trim();
@@ -332,7 +348,6 @@ window.parseBoardLine = function(line) {
   }
 };
 
-/* ---------- 연결 상태 UI ---------- */
 window._connState = 'idle';
 
 window.setConnectionState = function(state) {
@@ -382,24 +397,12 @@ window.setConnectionState = function(state) {
   btn.style.setProperty('cursor', s.disabled ? 'wait' : 'pointer', 'important');
 };
 
-/* ════════════════════════════════════════════════════════════════════
-   v2.8.1 연결 안정화 패치 — 5가지 버그 수정
-   1) idle 상태 클릭 시 requestPort() 호출
-   2) port.open() 최대 3회 재시도
-   3) DTR/RTS 토글 + 1.5초 대기 (CH340 안정화)
-   4) disconnect 리스너 중복 등록 방지
-   5) stopCubelinkReader에 OS 포트 해제 대기 추가
-   ════════════════════════════════════════════════════════════════════ */
-
-/* ---------- 연결 해제 함수 (v2.8.1 강화) ---------- */
 window.stopCubelinkReader = async function() {
   window._readerRunning = false;
   try { await window._reader?.cancel(); } catch(_){}
   try { window._reader?.releaseLock(); } catch(_){}
-  // pipeTo 종료 대기
   await new Promise(r => setTimeout(r, 100));
   try { await window._serialPort?.close(); } catch(_){}
-  // OS가 포트 해제할 시간
   await new Promise(r => setTimeout(r, 200));
   window._reader = null;
   window._serialPort = null;
@@ -408,7 +411,6 @@ window.stopCubelinkReader = async function() {
   console.log('🔌 연결 해제됨');
 };
 
-/* ---------- 버튼 동작 처리 (v2.8.1 — idle/lost 모두 지원) ---------- */
 window.addEventListener('load', () => {
   const btn = document.getElementById('btnConnectInit');
   if (!btn) return;
@@ -424,28 +426,21 @@ window.addEventListener('load', () => {
     }
 
     if (state === 'connected') {
-      // 연결 해제
       await stopCubelinkReader();
       return;
     }
 
-    // idle 또는 lost → 새 연결 시도
     setConnectionState('connecting');
     try {
-      // 1) 이전 상태 완전 정리
       if (window._serialPort || window._reader) {
         await stopCubelinkReader();
         setConnectionState('connecting');
       }
-
-      // 2) 이미 승인된 포트 우선 사용, 없으면 사용자에게 요청
       const ports = await navigator.serial.getPorts();
       let port = ports[0];
       if (!port) {
         port = await navigator.serial.requestPort();
       }
-
-      // 3) 리더 시작
       await startCubelinkReader(port);
     } catch(e) {
       console.warn('연결 실패:', e.message);
@@ -458,7 +453,6 @@ window.addEventListener('load', () => {
   }, true);
 });
 
-/* ---------- 자동 리더 루프 (v2.8.1 — 재시도 + 안정화) ---------- */
 window.startCubelinkReader = async function(port) {
   if (window._readerRunning) {
     console.log('이미 리더 동작 중 — 무시');
@@ -476,7 +470,6 @@ window.startCubelinkReader = async function(port) {
     return;
   }
 
-  // ─── 포트 열기 (최대 3회 재시도) ───
   if (!port.readable) {
     let opened = false, lastErr = null;
     for (let i = 0; i < 3 && !opened; i++) {
@@ -496,7 +489,6 @@ window.startCubelinkReader = async function(port) {
     }
   }
 
-  // ─── DTR/RTS 토글로 아두이노 리셋 (CH340 안정화) ───
   try {
     await port.setSignals({ dataTerminalReady: false, requestToSend: false });
     await new Promise(r => setTimeout(r, 100));
@@ -505,13 +497,11 @@ window.startCubelinkReader = async function(port) {
     console.warn('setSignals 미지원 (무시 가능):', e.message);
   }
 
-  // ─── 아두이노 부트로더 대기 (CH340 + 리셋 안정화) ───
   await new Promise(r => setTimeout(r, 1500));
 
   window._serialPort = port;
   window._readerRunning = true;
 
-  // ─── disconnect 리스너 중복 등록 방지 ───
   if (window._disconnectHandler) {
     try { port.removeEventListener('disconnect', window._disconnectHandler); } catch(_){}
   }
@@ -557,9 +547,7 @@ window.startCubelinkReader = async function(port) {
   }
 };
 
-/* ---------- 자동 재연결 + 창크기 변화 대응 ---------- */
 window.addEventListener('load', () => {
-  // 자동 재연결 (최대 2회)
   try {
     const tryAutoConnect = async (attempt = 1) => {
       try {
@@ -593,15 +581,10 @@ window.addEventListener('load', () => {
 <script>
 /* ════════════════════════════════════════════════════════════════════
    v2.8.0 3단계 — 인터랙티브 조이스틱 + D2 푸시버튼 시뮬레이션
-   - JoyPad1 (왼쪽, A0/A1/D2)
-   - JoyPad2 (오른쪽, A2/A3/D7)
-   - D2 푸시 버튼 단독
-   - 마우스/터치 드래그로 window.joystickData 자동 갱신
    ════════════════════════════════════════════════════════════════════ */
 (function() {
   'use strict';
 
-  /* ─── 조이스틱 패드 생성 함수 ─── */
   function createJoyPad(padId, dotId, labelId, swStateId, resetBtnId, sideKey, swPin) {
     const pad   = document.getElementById(padId);
     const dot   = document.getElementById(dotId);
@@ -688,16 +671,9 @@ window.addEventListener('load', () => {
 
     commitToGlobal();
 
-    return {
-      getX: () => state.x,
-      getY: () => state.y,
-      getSW: () => state.sw,
-      reset,
-      side: sideKey
-    };
+    return { getX:()=>state.x, getY:()=>state.y, getSW:()=>state.sw, reset, side:sideKey };
   }
 
-  /* ─── D2 푸시 버튼 단독 바인딩 ─── */
   function bindD2Button() {
     const btn = document.getElementById('btnD2Sim');
     if (!btn) { setTimeout(bindD2Button, 500); return; }
@@ -734,10 +710,8 @@ window.addEventListener('load', () => {
   function initJoyPads() {
     const JoyPad1 = createJoyPad('joyPad1', 'joyDot1', 'joyValue1', 'joySw1State', 'joyResetBtn1', 'left',  2);
     const JoyPad2 = createJoyPad('joyPad2', 'joyDot2', 'joyValue2', 'joySw2State', 'joyResetBtn2', 'right', 7);
-
-    if (JoyPad1) console.log('✅ JoyPad1 (왼쪽/A0/A1/D2) 인터랙티브 활성화');
-    if (JoyPad2) console.log('✅ JoyPad2 (오른쪽/A2/A3/D7) 인터랙티브 활성화');
-
+    if (JoyPad1) console.log('✅ JoyPad1 활성화');
+    if (JoyPad2) console.log('✅ JoyPad2 활성화');
     window.JoyPad1 = JoyPad1;
     window.JoyPad2 = JoyPad2;
   }
@@ -752,7 +726,6 @@ window.addEventListener('load', () => {
     bindD2Button();
   }
 
-  // 시뮬 탭 첫 클릭 시 재바인딩 안전장치
   document.addEventListener('click', (e) => {
     const tab = e.target.closest('.tab[data-tab="sim"]');
     if (!tab) return;
@@ -763,6 +736,31 @@ window.addEventListener('load', () => {
   });
 
   console.log('🎮 v2.8.1 인터랙티브 조이스틱 시뮬 로드됨');
+})();
+</script>
+
+<script>
+/* ════════════════════════════════════════════════════════════════════
+   v2.8.1 — 페이지 로드 후 자동 화면 맞춤 (3회 반복 트리거)
+   브라우저 창에 정확히 들어맞도록 Blockly 영역을 재계산
+   ════════════════════════════════════════════════════════════════════ */
+(function() {
+  function fitToViewport() {
+    window.dispatchEvent(new Event('resize'));
+    if (window.workspace && typeof Blockly !== 'undefined' && typeof Blockly.svgResize === 'function') {
+      Blockly.svgResize(window.workspace);
+    }
+  }
+  // 초기 로딩 직후, 그리고 200ms / 600ms / 1200ms에 재조정
+  // (3D 모델 로딩, 폰트, 이미지 등이 느리게 들어오는 경우 대비)
+  window.addEventListener('load', () => {
+    fitToViewport();
+    setTimeout(fitToViewport, 200);
+    setTimeout(fitToViewport, 600);
+    setTimeout(fitToViewport, 1200);
+  });
+  // 창 크기 변경 시 즉시 반응
+  window.addEventListener('resize', fitToViewport);
 })();
 </script>
 
