@@ -349,3 +349,86 @@ body.graduated #serialMonitorBar.collapsed { height: 36px; }
 #orientationOverlay {
   display: none !important;
 }
+/* ════════════════════════════════════════════════════════════════════
+   v2.8.2 — 시리얼 모니터 입력창 (히든 커맨드 시스템)
+   시리얼 모니터가 펼쳐진 상태에서만 표시됨
+   ════════════════════════════════════════════════════════════════════ */
+.serial-monitor-input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: #0d0d0d;
+  border-top: 1px solid var(--gold-soft);
+}
+.serial-monitor-bar.collapsed .serial-monitor-input {
+  display: none;
+}
+.serial-prompt {
+  color: var(--gold);
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-weight: 700;
+  font-size: 13px;
+}
+#serialCmdInput {
+  flex: 1;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  color: #ccc;
+  padding: 4px 8px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 12px;
+  border-radius: 4px;
+  outline: none;
+}
+#serialCmdInput:focus {
+  border-color: var(--gold-soft);
+  background: #222;
+}
+#serialCmdInput::placeholder {
+  color: #555;
+  font-style: italic;
+}
+
+/* v2.8.2 — 디지털 트윈 모드 활성화 시 실시간 실행 버튼 변신 */
+#btnRunRealtime.twin-mode {
+  background: linear-gradient(135deg, #667eea, #764ba2, #f093fb, #4facfe) !important;
+  background-size: 300% 300% !important;
+  animation: twinGradient 3s ease infinite;
+  color: white !important;
+  font-weight: 700;
+  border: 1px solid #764ba2 !important;
+  box-shadow: 0 0 12px rgba(118, 75, 162, 0.5);
+}
+@keyframes twinGradient {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* v2.8.2 — 토스트 알림 */
+.cubelink-toast {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-20px);
+  background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
+  color: white;
+  padding: 14px 28px;
+  border-radius: 8px;
+  border: 1px solid var(--gold);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 20px rgba(212,175,55,0.3);
+  font-weight: 600;
+  font-size: 14px;
+  z-index: 99999;
+  opacity: 0;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+.cubelink-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.cubelink-toast.success { border-color: #2ecc71; box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 20px rgba(46,204,113,0.4); }
+.cubelink-toast.warn    { border-color: #f39c12; box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 20px rgba(243,156,18,0.4); }
+.cubelink-toast.info    { border-color: #3498db; box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 20px rgba(52,152,219,0.4); }

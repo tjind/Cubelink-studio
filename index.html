@@ -78,6 +78,12 @@
         </div>
       </div>
       <div class="serial-monitor-body" id="serialMonitor">시뮬레이션 출력이 여기에 표시됩니다.</div>
+  <div class="serial-monitor-input" id="serialInputBar">
+  <span class="serial-prompt">&gt;</span>
+  <input type="text" id="serialCmdInput" placeholder="로봇에 보낼 시리얼 명령 입력..." autocomplete="off" spellcheck="false">
+  <button class="btn" id="btnSerialSend" style="padding:3px 10px;font-size:11px;">전송</button>
+</div>
+
     </div>
   </aside>
 
@@ -868,6 +874,292 @@ window.addEventListener('load', () => {
 })();
 </script>
 
+<script>
+/* ════════════════════════════════════════════════════════════════════
+   v2.8.2 — 동작 모드 시스템 + 시리얼 명령어 인터프리터
+   ════════════════════════════════════════════════════════════════════
+   모드: real(실물만) / sim(그래픽만) / twin(디지털 트윈)
+   기본 모드: 버튼이 결정 (시뮬레이션 시작=sim, 실시간 실행=real)
+   히든 명령: 시리얼 입력창에 비밀 단어 입력 시 트윈 모드 해금
+   해제 유지: 세션만 (새로고침 시 다시 잠금)
+   ════════════════════════════════════════════════════════════════════ */
+(function() {
+  'use strict';
+
+  // ─── 모드 상태 ──────────────────────────────────────────
+  window.actionMode = window.actionMode || 'real';     // 현재 활성 모드
+  window.twinUnlocked = false;                         // 디지털 트윈 해금 여부
+
+  window.shouldSendToRobot   = () => window.actionMode === 'real' || window.actionMode === 'twin';
+  window.shouldUpdateGraphic = () => window.actionMode === 'sim'  || window.actionMode === 'twin';
+
+  // ─── 토스트 알림 ────────────────────────────────────────
+  window.showToast = function(message, type, duration) {
+    type = type || 'info';
+    duration = duration || 2500;
+    const old = document.getElementById('cubelinkToast');
+    if (old) old.remove();
+    const toast = document.createElement('div');
+    toast.id = 'cubelinkToast';
+    toast.className = 'cubelink-toast ' + type;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add('show'));
+    setTimeout(() => {
+      toast.classList.remove('show');
+      setTimeout(() => toast.remove(), 400);
+    }, duration);
+  };
+
+  // ─── 실시간 실행 버튼 외관 갱신 ──────────────────────────
+  function updateRunButton() {
+    const btn = document.getElementById('btnRunRealtime');
+    if (!btn) return;
+    if (window.actionMode === 'twin') {
+      btn.classList.add('twin-mode');
+      btn.textContent = '🔄 디지털 트윈 실행';
+      btn.title = '블록 코드를 실물 로봇과 3D 그래픽에서 동시에 실행합니다.';
+    } else if (window.actionMode === 'sim') {
+      btn.classList.remove('twin-mode');
+      btn.textContent = '🖥️ 그래픽만 실행';
+      btn.title = '블록 코드를 3D 그래픽에서만 실행합니다.';
+      btn.style.setProperty('background', 'linear-gradient(135deg, #3498db, #2980b9)', 'important');
+    } else {
+      btn.classList.remove('twin-mode');
+      btn.textContent = '▶ 실시간 실행';
+      btn.title = '블록 코드를 OTG로 연결된 로봇팔에서 실시간 실행합니다.';
+      btn.style.setProperty('background', 'linear-gradient(135deg, #D4AF37, #B8941F)', 'important');
+    }
+  }
+
+  // ─── 모드 변경 ──────────────────────────────────────────
+  window.setActionMode = function(mode, opts) {
+    opts = opts || {};
+    if (!['real','sim','twin'].includes(mode)) return false;
+    if (mode === 'twin' && !window.twinUnlocked) {
+      window.showToast('🔒 디지털 트윈은 잠금 상태입니다', 'warn');
+      return false;
+    }
+    window.actionMode = mode;
+    updateRunButton();
+    if (!opts.silent) {
+      const names = { real:'실물만', sim:'그래픽만', twin:'디지털 트윈' };
+      window.showToast('🔀 ' + names[mode] + ' 모드', 'info', 1800);
+    }
+    console.log('🔀 동작 모드 →', mode);
+    return true;
+  };
+
+  // ─── 시뮬레이션 시작 / 실시간 실행 버튼이 모드를 결정 ──
+  function bindRunButtons() {
+    const btnSim = document.getElementById('btnSimStart');
+    const btnRun = document.getElementById('btnRunRealtime');
+
+    // 시뮬레이션 시작 → 그래픽만 모드
+    if (btnSim && btnSim.dataset.modeBound !== '1') {
+      btnSim.dataset.modeBound = '1';
+      btnSim.addEventListener('click', () => {
+        window.setActionMode('sim', { silent: false });
+      }, true);  // capture 단계에서 모드만 먼저 설정
+    }
+
+    // 실시간 실행 → 트윈 잠금 해제 시엔 twin, 아니면 real
+    if (btnRun && btnRun.dataset.modeBound !== '1') {
+      btnRun.dataset.modeBound = '1';
+      btnRun.addEventListener('click', () => {
+        const target = window.twinUnlocked ? 'twin' : 'real';
+        window.setActionMode(target, { silent: false });
+      }, true);
+    }
+  }
+
+  // ─── 트윈 잠금 해제 ─────────────────────────────────────
+  window.unlockTwinMode = function() {
+    if (window.twinUnlocked) {
+      window.showToast('이미 디지털 트윈이 활성화되어 있습니다', 'info');
+      return;
+    }
+    window.twinUnlocked = true;
+    window.setActionMode('twin', { silent: true });
+    window.showToast('✨ 디지털 트윈 모드 활성화 — 실물 + 그래픽 동시 동작', 'success', 3500);
+    console.log('🎉 디지털 트윈 모드 잠금 해제됨');
+  };
+
+  // ─── 시리얼 명령어 인터프리터 ───────────────────────────
+  // 정답 단어들 (대소문자/공백 무시)
+  const SECRET_TWIN = ['디지털트윈', 'twin', '트윈', 'digitaltwin', 'digital twin'];
+  const CMD_REAL    = ['실물만', 'real', '실물', 'robot'];
+  const CMD_SIM     = ['그래픽만', 'sim', '그래픽', 'graphic', 'simulation'];
+  const CMD_RESET   = ['초기화', 'reset', 'lock', '잠금'];
+  const CMD_HELP    = ['help', '도움말', '?'];
+  const CMD_VERSION = ['version', '버전', 'ver'];
+
+  function normalize(s) {
+    return String(s || '').trim().toLowerCase().replace(/\s+/g, '');
+  }
+  function matches(input, list) {
+    const n = normalize(input);
+    return list.some(w => normalize(w) === n);
+  }
+
+  function appendToMonitor(text, color) {
+    const mon = document.getElementById('serialMonitor');
+    if (!mon) return;
+    const line = document.createElement('div');
+    line.style.color = color || '#888';
+    line.style.fontFamily = "'Consolas','Monaco',monospace";
+    line.style.fontSize = '11px';
+    line.textContent = text;
+    mon.appendChild(line);
+    mon.scrollTop = mon.scrollHeight;
+  }
+
+  function handleCommand(cmd) {
+    if (!cmd) return;
+    const display = '> ' + cmd;
+    appendToMonitor(display, '#D4AF37');
+
+    // 1) 트윈 잠금 해제 (히든)
+    if (matches(cmd, SECRET_TWIN)) {
+      window.unlockTwinMode();
+      appendToMonitor('✓ 디지털 트윈 모드 해제됨', '#2ecc71');
+      return;
+    }
+
+    // 2) 모드 직접 전환 (트윈 외엔 누구나 사용 가능)
+    if (matches(cmd, CMD_REAL)) {
+      window.setActionMode('real');
+      appendToMonitor('✓ 실물 전용 모드', '#2ecc71');
+      return;
+    }
+    if (matches(cmd, CMD_SIM)) {
+      window.setActionMode('sim');
+      appendToMonitor('✓ 그래픽 전용 모드', '#2ecc71');
+      return;
+    }
+
+    // 3) 초기화 (트윈 잠금)
+    if (matches(cmd, CMD_RESET)) {
+      window.twinUnlocked = false;
+      window.setActionMode('real', { silent: true });
+      appendToMonitor('✓ 모드 초기화 — 실물 전용으로 복귀', '#3498db');
+      window.showToast('🔒 모드 초기화', 'info');
+      return;
+    }
+
+    // 4) 도움말 (비밀 명령은 표시 안 함)
+    if (matches(cmd, CMD_HELP)) {
+      appendToMonitor('─── 사용 가능 명령 ───', '#D4AF37');
+      appendToMonitor('  real / 실물만     — 실물 로봇 전용', '#888');
+      appendToMonitor('  sim  / 그래픽만   — 3D 그래픽 전용', '#888');
+      appendToMonitor('  reset / 초기화    — 기본 모드로 복귀', '#888');
+      appendToMonitor('  version / 버전    — 현재 버전 표시', '#888');
+      return;
+    }
+
+    // 5) 버전
+    if (matches(cmd, CMD_VERSION)) {
+      appendToMonitor('CUBELINK Studio v2.8.2', '#3498db');
+      return;
+    }
+
+    // 6) 그 외 — 실 로봇으로 시리얼 전송 (정상 사용자 케이스)
+    if (window._serialPort && window._serialPort.writable) {
+      window.sendToRobot ? window.sendToRobot(cmd + '\n')
+                         : sendRawToRobot(cmd + '\n');
+      appendToMonitor('→ 로봇으로 전송: ' + cmd, '#888');
+    } else {
+      appendToMonitor('알 수 없는 명령: ' + cmd, '#e74c3c');
+    }
+  }
+
+  // 실 로봇 전송 헬퍼 (모드에 따라 차단)
+  window.sendToRobot = async function(text) {
+    if (!window.shouldSendToRobot()) {
+      console.log('🚫 실물 전송 차단 (' + window.actionMode + '):', text.trim());
+      return;
+    }
+    if (!window._serialPort || !window._serialPort.writable) return;
+    try {
+      const writer = window._serialPort.writable.getWriter();
+      await writer.write(new TextEncoder().encode(text));
+      writer.releaseLock();
+    } catch(e) {
+      console.warn('시리얼 전송 오류:', e.message);
+    }
+  };
+
+  async function sendRawToRobot(text) {
+    if (!window._serialPort || !window._serialPort.writable) return;
+    try {
+      const writer = window._serialPort.writable.getWriter();
+      await writer.write(new TextEncoder().encode(text));
+      writer.releaseLock();
+    } catch(e) {}
+  }
+
+  // ─── 입력창 바인딩 ──────────────────────────────────────
+  function bindCommandInput() {
+    const input = document.getElementById('serialCmdInput');
+    const sendBtn = document.getElementById('btnSerialSend');
+    if (!input || input.dataset.bound === '1') return;
+    input.dataset.bound = '1';
+
+    const submit = () => {
+      const v = input.value.trim();
+      if (!v) return;
+      input.value = '';
+      handleCommand(v);
+    };
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        submit();
+      }
+    });
+    if (sendBtn) sendBtn.addEventListener('click', submit);
+  }
+
+  // ─── parseBoardLine 모드 라우팅 (실물→그래픽 차단) ──────
+  function patchParseBoardLine() {
+    if (typeof window.parseBoardLine !== 'function') {
+      setTimeout(patchParseBoardLine, 300);
+      return;
+    }
+    if (window.parseBoardLine._modeWrapped) return;
+    const origParse = window.parseBoardLine;
+    window.parseBoardLine = function(line) {
+      if (!line) return;
+      const head = String(line).trim().split(',')[0];
+      // 그래픽 갱신용 메시지: 실물만 모드일 때 차단
+      const graphicMsgs = ['A', 'J1', 'J2', 'U'];
+      if (graphicMsgs.includes(head) && !window.shouldUpdateGraphic()) {
+        return;  // 실물만 모드 → 그래픽 무시
+      }
+      return origParse.call(this, line);
+    };
+    window.parseBoardLine._modeWrapped = true;
+    console.log('✅ parseBoardLine 모드 라우팅 적용');
+  }
+
+  // ─── 초기화 ─────────────────────────────────────────────
+  function init() {
+    bindRunButtons();
+    bindCommandInput();
+    patchParseBoardLine();
+    updateRunButton();
+    console.log('🔀 v2.8.2 동작 모드 + 명령어 시스템 로드됨 (기본: real)');
+    console.log('💡 강사용: 시리얼 모니터 입력창에 비밀 단어를 입력하면 디지털 트윈 해제');
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
 
 </body>
 </html>
