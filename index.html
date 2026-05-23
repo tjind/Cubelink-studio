@@ -271,14 +271,19 @@
 
 <script>
 /* ════════════════════════════════════════════════════════════════════
-   CUBELINK Studio v2.8.1 — 실시간 UI 갱신 + 연결 안정화 통합 모듈
+   CUBELINK Studio v2.8.3 — CH340 + Chromebook 재연결 안정화
+   ────────────────────────────────────────────────────────────────────
+   주요 개선:
+   • USB 분리 시 reader/port 완전 해제 (좀비 객체 방지)
+   • navigator.serial 전역 connect/disconnect 이벤트 청취
+   • 자동 재연결 (USB 재삽입 시 사용자 클릭 불필요)
+   • CH340 드라이버 잠금 대응 — 백오프 재시도 (0.5/1.5/3초)
+   • 좀비 포트 회피 — forget() + 새 권한 요청 fallback
+   • 환경 사전 진단 (HTTPS, 브라우저, Web Serial 지원)
    ════════════════════════════════════════════════════════════════════ */
 
 /* ---------- 조이스틱 설치 방향 보정 설정 ---------- */
-window.joyOrientation = window.joyOrientation || {
-  1: 'cw90',
-  2: 'cw90'
-};
+window.joyOrientation = window.joyOrientation || { 1: 'cw90', 2: 'cw90' };
 
 function applyJoyOrientation(which, rawX, rawY) {
   const orient = window.joyOrientation[which] || 'none';
@@ -287,8 +292,6 @@ function applyJoyOrientation(which, rawX, rawY) {
     case 'cw90':   x = 1023 - rawY; y = rawX;        break;
     case 'ccw90':  x = rawY;        y = 1023 - rawX; break;
     case 'flip':   x = 1023 - rawX; y = 1023 - rawY; break;
-    case 'none':
-    default: break;
   }
   return { x, y };
 }
@@ -298,32 +301,21 @@ window.updateJoystickUI = function(which, rawX, rawY, sw) {
   const pad = document.getElementById(`joyPad${which}`);
   const dot = document.getElementById(`joyDot${which}`);
   if (!pad || !dot) return;
-
   const padSize = pad.getBoundingClientRect().width;
   const dotSize = dot.getBoundingClientRect().width || 16;
   const maxOffset = (padSize - dotSize) / 2;
-
   const nx = (Math.max(0, Math.min(1023, x)) - 512) / 512;
   const ny = (Math.max(0, Math.min(1023, y)) - 512) / 512;
-
-  dot.style.transform =
-    `translate(calc(-50% + ${nx * maxOffset}px), calc(-50% + ${ny * maxOffset}px))`;
-
+  dot.style.transform = `translate(calc(-50% + ${nx * maxOffset}px), calc(-50% + ${ny * maxOffset}px))`;
   const container = pad.closest('div').parentElement || pad.parentElement;
   const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
   let node;
   while ((node = walker.nextNode())) {
-    if (/X\s*:\s*\d+/.test(node.nodeValue)) {
-      node.nodeValue = `X:${x} Y:${y}`;
-      break;
-    }
+    if (/X\s*:\s*\d+/.test(node.nodeValue)) { node.nodeValue = `X:${x} Y:${y}`; break; }
   }
   const swWalker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
   while ((node = swWalker.nextNode())) {
-    if (/SW\s*:/.test(node.nodeValue)) {
-      node.nodeValue = `SW: ${sw ? 'HIGH' : 'LOW'}`;
-      break;
-    }
+    if (/SW\s*:/.test(node.nodeValue)) { node.nodeValue = `SW: ${sw ? 'HIGH' : 'LOW'}`; break; }
   }
 };
 
@@ -331,10 +323,7 @@ window.updateUltrasonicUI = function(cm) {
   const d = Math.max(0, Math.min(999, cm));
   const sliderVal = Math.max(0, Math.min(100, cm));
   const slider = document.getElementById('usSlider');
-  if (slider) {
-    slider.value = sliderVal;
-    slider.dispatchEvent(new Event('input', { bubbles: true }));
-  }
+  if (slider) { slider.value = sliderVal; slider.dispatchEvent(new Event('input', { bubbles: true })); }
   const usValue = document.getElementById('usValue');
   if (usValue) usValue.textContent = d;
 };
@@ -345,7 +334,6 @@ window.parseBoardLine = function(line) {
   if (!s) return;
   const p = s.split(',');
   const head = p[0];
-
   if (head === 'READY') { console.log('🟢 보드 READY:', s); return; }
   if (head === 'U')  { const d = parseInt(p[1],10); if (!isNaN(d)) updateUltrasonicUI(d); return; }
   if (head === 'J1') { updateJoystickUI(1, parseInt(p[1],10), parseInt(p[2],10), parseInt(p[3],10)); return; }
@@ -358,43 +346,20 @@ window.parseBoardLine = function(line) {
 };
 
 window._connState = 'idle';
+window._reconnecting = false;
+window._autoReconnect = true;  // USB 재삽입 시 자동 재연결 활성화 여부
 
 window.setConnectionState = function(state) {
   const btn = document.getElementById('btnConnectInit');
   if (!btn) return;
   window._connState = state;
-
   const states = {
-    idle: {
-      text: '🔌 로봇 연결 및 초기화 (90도)',
-      bg: 'linear-gradient(135deg, #2ecc71, #27ae60)',
-      border: '#27ae60',
-      title: '로봇을 연결하고 모든 모터를 90도 차렷 자세로 정렬합니다.',
-      disabled: false,
-    },
-    connecting: {
-      text: '⏳ 연결 중...',
-      bg: 'linear-gradient(135deg, #95a5a6, #7f8c8d)',
-      border: '#7f8c8d',
-      title: '연결 중입니다. 잠시만 기다려 주세요.',
-      disabled: true,
-    },
-    connected: {
-      text: '✅ 연결됨 — 해제하려면 클릭',
-      bg: 'linear-gradient(135deg, #3498db, #2980b9)',
-      border: '#2980b9',
-      title: '로봇이 연결되어 데이터를 수신 중입니다. 클릭하면 연결을 해제합니다.',
-      disabled: false,
-    },
-    lost: {
-      text: '⚠️ 연결 끊김 — 재연결하려면 클릭',
-      bg: 'linear-gradient(135deg, #f39c12, #e67e22)',
-      border: '#e67e22',
-      title: '하드웨어 연결이 끊겼습니다. 클릭하여 재연결하세요.',
-      disabled: false,
-    },
+    idle:       { text:'🔌 로봇 연결 및 초기화 (90도)', bg:'linear-gradient(135deg, #2ecc71, #27ae60)', border:'#27ae60', title:'로봇을 연결합니다.', disabled:false },
+    connecting: { text:'⏳ 연결 중...',                 bg:'linear-gradient(135deg, #95a5a6, #7f8c8d)', border:'#7f8c8d', title:'연결 중...',           disabled:true },
+    connected:  { text:'✅ 연결됨 — 해제하려면 클릭',   bg:'linear-gradient(135deg, #3498db, #2980b9)', border:'#2980b9', title:'연결 해제',            disabled:false },
+    lost:       { text:'⚠️ 연결 끊김 — 재연결 시도 중', bg:'linear-gradient(135deg, #f39c12, #e67e22)', border:'#e67e22', title:'USB 재삽입 대기',      disabled:false },
+    failed:     { text:'❌ 연결 실패 — 클릭하여 재시도', bg:'linear-gradient(135deg, #e74c3c, #c0392b)', border:'#c0392b', title:'다시 시도하세요',     disabled:false },
   };
-
   const s = states[state] || states.idle;
   btn.textContent = s.text;
   btn.title = s.title;
@@ -406,98 +371,143 @@ window.setConnectionState = function(state) {
   btn.style.setProperty('cursor', s.disabled ? 'wait' : 'pointer', 'important');
 };
 
-window.stopCubelinkReader = async function() {
+/* ───────────────────────────────────────────────────────────
+   💎 완전 해제 함수 — USB 분리 시 호출되는 핵심 루틴
+   reader, writer, port를 모두 완벽하게 정리해 좀비 객체 방지
+   ─────────────────────────────────────────────────────────── */
+window.fullCleanup = async function(opts) {
+  opts = opts || {};
   window._readerRunning = false;
+
+  // 1) reader 강제 해제
   try { await window._reader?.cancel(); } catch(_){}
   try { window._reader?.releaseLock(); } catch(_){}
-  await new Promise(r => setTimeout(r, 100));
-  try { await window._serialPort?.close(); } catch(_){}
-  await new Promise(r => setTimeout(r, 200));
   window._reader = null;
+
+  // 2) decoder 해제 (있을 경우)
+  await new Promise(r => setTimeout(r, 50));
+
+  // 3) port.close() 명시적 호출 — 가장 중요
+  if (window._serialPort) {
+    try {
+      // disconnect 핸들러 먼저 제거 (close 중에 또 트리거되지 않도록)
+      if (window._disconnectHandler) {
+        try { window._serialPort.removeEventListener('disconnect', window._disconnectHandler); } catch(_){}
+      }
+      await window._serialPort.close();
+      console.log('🔌 port.close() 성공');
+    } catch(e) {
+      console.warn('port.close() 실패 (무시):', e.message);
+    }
+  }
+
+  // 4) OS 레벨 포트 해제 대기 (CH340 드라이버 안정화)
+  await new Promise(r => setTimeout(r, 300));
+
+  // 5) 전역 변수 초기화
   window._serialPort = null;
   window._disconnectHandler = null;
-  setConnectionState('idle');
-  console.log('🔌 연결 해제됨');
+
+  if (!opts.silent) {
+    setConnectionState('idle');
+    console.log('✅ 완전 해제 완료');
+  }
 };
 
-window.addEventListener('load', () => {
-  const btn = document.getElementById('btnConnectInit');
-  if (!btn) return;
+// 하위 호환
+window.stopCubelinkReader = window.fullCleanup;
 
-  btn.addEventListener('click', async (ev) => {
-    ev.stopImmediatePropagation();
-    ev.preventDefault();
-    const state = window._connState;
+/* ───────────────────────────────────────────────────────────
+   💎 좀비 포트 회피 헬퍼
+   getPorts()에서 받은 포트가 이미 readable이거나 readable.locked면
+   forget()으로 권한 폐기 후 requestPort()로 새로 받기
+   ─────────────────────────────────────────────────────────── */
+async function getCleanPort(preferAuto) {
+  const ports = await navigator.serial.getPorts();
+  let candidate = ports[0] || null;
 
-    if (state === 'connecting') {
-      console.log('이미 연결 중 — 무시');
-      return;
+  // 자동 모드(USB 재삽입 자동 재연결 등)에서는 첫 포트 시도
+  if (preferAuto && candidate) {
+    // 좀비 검사: 이미 readable.locked면 폐기 후 새로 요청
+    if (candidate.readable && candidate.readable.locked) {
+      console.warn('⚠ 좀비 포트 감지 — forget() 후 재요청');
+      try { await candidate.forget?.(); } catch(_){}
+      candidate = null;
+    } else {
+      return candidate;
     }
-
-    if (state === 'connected') {
-      await stopCubelinkReader();
-      return;
-    }
-
-    setConnectionState('connecting');
-    try {
-      if (window._serialPort || window._reader) {
-        await stopCubelinkReader();
-        setConnectionState('connecting');
-      }
-      const ports = await navigator.serial.getPorts();
-      let port = ports[0];
-      if (!port) {
-        port = await navigator.serial.requestPort();
-      }
-      await startCubelinkReader(port);
-    } catch(e) {
-      console.warn('연결 실패:', e.message);
-      alert('연결 실패: ' + e.message + '\n\n다음을 확인하세요:\n' +
-            '• Arduino IDE의 시리얼 모니터가 닫혀 있는지\n' +
-            '• 다른 브라우저 탭에서 포트를 사용 중인지\n' +
-            '• USB 케이블을 뽑았다 다시 꽂아 보세요');
-      setConnectionState('idle');
-    }
-  }, true);
-});
-
-window.startCubelinkReader = async function(port) {
-  if (window._readerRunning) {
-    console.log('이미 리더 동작 중 — 무시');
-    return;
   }
+
+  // 사용자 클릭으로 들어온 경우 또는 자동에서 좀비 발생 시
+  if (!candidate) {
+    try {
+      candidate = await navigator.serial.requestPort();
+    } catch(e) {
+      // 사용자가 취소를 누름
+      if (e.name === 'NotFoundError' || /no port selected/i.test(e.message || '')) {
+        throw new Error('USER_CANCELLED');
+      }
+      throw e;
+    }
+  }
+  return candidate;
+}
+
+/* ───────────────────────────────────────────────────────────
+   💎 백오프 재시도로 port.open() — CH340 드라이버 잠금 대응
+   ─────────────────────────────────────────────────────────── */
+async function openPortWithBackoff(port) {
+  const delays = [0, 500, 1500, 3000];  // 즉시 → 0.5s → 1.5s → 3s
+  let lastErr = null;
+  for (let i = 0; i < delays.length; i++) {
+    if (delays[i] > 0) await new Promise(r => setTimeout(r, delays[i]));
+    try {
+      if (port.readable) {
+        // 이미 열려 있으면 일단 닫고 재시도
+        console.log(`재시도 ${i}: port가 이미 열려 있어 close 후 재시도`);
+        try { await port.close(); } catch(_){}
+        await new Promise(r => setTimeout(r, 200));
+      }
+      await port.open({ baudRate: 115200, bufferSize: 4096 });
+      console.log(`✅ port.open() 성공 (시도 ${i+1}/${delays.length})`);
+      return port;
+    } catch(e) {
+      lastErr = e;
+      console.warn(`port.open() 실패 (시도 ${i+1}/${delays.length}): ${e.message}`);
+      // 'already open' 오류는 짧은 대기 후 재시도
+      // 'Failed to open serial port' 오류는 더 긴 대기
+    }
+  }
+  throw lastErr || new Error('port.open() 최종 실패');
+}
+
+/* ───────────────────────────────────────────────────────────
+   💎 메인: 시리얼 리더 시작
+   ─────────────────────────────────────────────────────────── */
+window.startCubelinkReader = async function(port) {
+  if (window._readerRunning) { console.log('이미 리더 동작 중 — 무시'); return; }
   setConnectionState('connecting');
 
   if (!port) {
-    const ports = await navigator.serial.getPorts();
-    port = ports[0];
-  }
-  if (!port) {
-    console.warn('포트 없음');
-    setConnectionState('idle');
-    return;
-  }
-
-  if (!port.readable) {
-    let opened = false, lastErr = null;
-    for (let i = 0; i < 3 && !opened; i++) {
-      try {
-        await port.open({ baudRate: 115200, bufferSize: 4096 });
-        opened = true;
-      } catch(e) {
-        lastErr = e;
-        console.warn(`포트 열기 실패 (${i+1}/3): ${e.message}`);
-        if (i < 2) await new Promise(r => setTimeout(r, 400));
-      }
-    }
-    if (!opened) {
-      console.warn('포트 열기 최종 실패:', lastErr?.message);
-      setConnectionState('idle');
-      throw lastErr || new Error('포트 열기 실패');
+    try {
+      port = await getCleanPort(true);
+    } catch(e) {
+      if (e.message === 'USER_CANCELLED') { setConnectionState('idle'); return; }
+      throw e;
     }
   }
+  if (!port) { setConnectionState('idle'); return; }
 
+  // 백오프 재시도로 안정적 open
+  try {
+    await openPortWithBackoff(port);
+  } catch(e) {
+    console.warn('포트 열기 최종 실패:', e.message);
+    setConnectionState('failed');
+    throw e;
+  }
+
+  // DTR/RTS 리셋 (CH340 초기화)
   try {
     await port.setSignals({ dataTerminalReady: false, requestToSend: false });
     await new Promise(r => setTimeout(r, 100));
@@ -505,19 +515,21 @@ window.startCubelinkReader = async function(port) {
   } catch(e) {
     console.warn('setSignals 미지원 (무시 가능):', e.message);
   }
-
-  await new Promise(r => setTimeout(r, 1500));
+  await new Promise(r => setTimeout(r, 1500));  // 부트로더 안정화
 
   window._serialPort = port;
   window._readerRunning = true;
 
+  // disconnect 핸들러: 완전 해제 후 상태를 lost로
   if (window._disconnectHandler) {
     try { port.removeEventListener('disconnect', window._disconnectHandler); } catch(_){}
   }
-  window._disconnectHandler = () => {
-    console.warn('🔌 USB 분리 감지');
-    window._readerRunning = false;
+  window._disconnectHandler = async () => {
+    console.warn('🔌 port.disconnect 이벤트 — 완전 해제 시작');
     setConnectionState('lost');
+    await window.fullCleanup({ silent: true });
+    setConnectionState('lost');  // cleanup이 idle로 바꿔도 lost 유지
+    // 자동 재연결은 navigator.serial.connect 이벤트에서 처리
   };
   port.addEventListener('disconnect', window._disconnectHandler);
 
@@ -552,26 +564,212 @@ window.startCubelinkReader = async function(port) {
     const wasRunning = window._readerRunning;
     window._readerRunning = false;
     console.log('🛑 리더 종료');
-    if (wasRunning) setConnectionState('lost');
+    if (wasRunning && window._connState !== 'lost') setConnectionState('lost');
   }
 };
 
-window.addEventListener('load', () => {
-  try {
-    const tryAutoConnect = async (attempt = 1) => {
-      try {
-        const ports = await navigator.serial.getPorts();
-        if (ports.length > 0) {
-          await startCubelinkReader(ports[0]);
-        }
-      } catch(e) {
-        console.warn(`자동 연결 ${attempt}/2 실패:`, e.message);
-        if (attempt < 2) setTimeout(() => tryAutoConnect(attempt + 1), 1500);
-      }
-    };
-    setTimeout(tryAutoConnect, 500);
-  } catch(e) {}
+/* ───────────────────────────────────────────────────────────
+   💎 환경 사전 진단
+   ─────────────────────────────────────────────────────────── */
+function diagnoseEnvironment() {
+  const issues = [];
+  // HTTPS 체크
+  const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+  if (location.protocol !== 'https:' && !isLocal) {
+    issues.push({ severity:'fatal', msg:'⚠️ HTTPS 주소가 아닙니다. https://tjind.github.io/Cubelink-studio/ 로 접속하세요.' });
+  }
+  // Web Serial API 지원
+  if (!('serial' in navigator)) {
+    issues.push({ severity:'fatal', msg:'⚠️ 이 브라우저는 로봇 연결을 지원하지 않습니다. Chrome 또는 Edge(데스크톱/노트북/Chromebook)를 사용하세요.' });
+  }
+  // 모바일 브라우저
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (isMobile) {
+    issues.push({ severity:'warn', msg:'📱 모바일에서는 시뮬레이션만 가능합니다. 실제 로봇 연결은 노트북/데스크톱에서 사용하세요.' });
+  }
+  return issues;
+}
 
+function showDiagnosticBanner(issues) {
+  if (!issues.length) return;
+  const existing = document.getElementById('cubelinkDiagBanner');
+  if (existing) existing.remove();
+  const banner = document.createElement('div');
+  banner.id = 'cubelinkDiagBanner';
+  const hasFatal = issues.some(i => i.severity === 'fatal');
+  banner.style.cssText = `
+    position:fixed; top:0; left:0; right:0; z-index:99998;
+    background:${hasFatal ? 'linear-gradient(135deg,#c0392b,#922b21)' : 'linear-gradient(135deg,#d68910,#b9770e)'};
+    color:white; padding:10px 50px 10px 16px; font-size:13px; font-weight:600;
+    box-shadow:0 2px 10px rgba(0,0,0,0.3); text-align:center;`;
+  banner.innerHTML = issues.map(i => i.msg).join(' &nbsp;|&nbsp; ') +
+    `<button onclick="document.getElementById('cubelinkDiagBanner').remove()" style="position:absolute;right:10px;top:8px;background:transparent;border:1px solid white;color:white;border-radius:4px;padding:2px 8px;cursor:pointer;">닫기 ✕</button>`;
+  document.body.insertBefore(banner, document.body.firstChild);
+}
+
+/* ───────────────────────────────────────────────────────────
+   💎 버튼 클릭 핸들러 + 전역 이벤트
+   ─────────────────────────────────────────────────────────── */
+window.addEventListener('load', () => {
+  // 환경 진단
+  const issues = diagnoseEnvironment();
+  if (issues.length) showDiagnosticBanner(issues);
+
+  // Web Serial 자체가 없으면 아래 로직 다 건너뜀
+  if (!('serial' in navigator)) return;
+
+  const btn = document.getElementById('btnConnectInit');
+  if (btn) {
+    btn.addEventListener('click', async (ev) => {
+      ev.stopImmediatePropagation();
+      ev.preventDefault();
+      const state = window._connState;
+      if (state === 'connecting') { console.log('이미 연결 중'); return; }
+      if (state === 'connected')  { await window.fullCleanup(); return; }
+
+      setConnectionState('connecting');
+      try {
+        // 항상 사전 정리
+        if (window._serialPort || window._reader) {
+          await window.fullCleanup({ silent: true });
+          setConnectionState('connecting');
+        }
+        // 좀비 회피 헬퍼로 깨끗한 포트 획득
+        const port = await getCleanPort(false);
+        await window.startCubelinkReader(port);
+      } catch(e) {
+        if (e.message === 'USER_CANCELLED') { setConnectionState('idle'); return; }
+        console.warn('연결 실패:', e.message);
+        setConnectionState('failed');
+        showConnectionTroubleshoot(e.message);
+      }
+    }, true);
+  }
+
+  // ─── USB 재삽입 자동 재연결 (가장 중요) ───
+  navigator.serial.addEventListener('connect', async (e) => {
+    console.log('🔌 navigator.serial.connect 이벤트:', e.target);
+    if (!window._autoReconnect) return;
+    if (window._connState === 'connected' || window._connState === 'connecting') return;
+
+    // 좀비 객체가 남아있을 수 있으므로 완전 해제 후 새로 시작
+    await window.fullCleanup({ silent: true });
+    setConnectionState('connecting');
+
+    // 보드 부팅 대기
+    await new Promise(r => setTimeout(r, 1500));
+
+    try {
+      // 이번엔 e.target을 직접 사용 (가장 확실)
+      await window.startCubelinkReader(e.target);
+      if (typeof window.showToast === 'function') {
+        window.showToast('✅ USB 자동 재연결됨', 'success', 2500);
+      }
+    } catch(err) {
+      console.warn('자동 재연결 실패:', err.message);
+      // 폴백: 깨끗한 포트로 다시 시도
+      try {
+        await new Promise(r => setTimeout(r, 1000));
+        const port = await getCleanPort(true);
+        await window.startCubelinkReader(port);
+        if (typeof window.showToast === 'function') {
+          window.showToast('✅ 재연결 성공 (2차 시도)', 'success', 2500);
+        }
+      } catch(err2) {
+        console.warn('2차 시도도 실패:', err2.message);
+        setConnectionState('failed');
+      }
+    }
+  });
+
+  // ─── 전역 disconnect 이벤트 (포트 객체 레벨 외에 시스템 레벨도 청취) ───
+  navigator.serial.addEventListener('disconnect', async (e) => {
+    console.warn('🔌 navigator.serial.disconnect 이벤트:', e.target);
+    setConnectionState('lost');
+    await window.fullCleanup({ silent: true });
+    setConnectionState('lost');
+    if (typeof window.showToast === 'function') {
+      window.showToast('⚠️ USB 분리됨 — 재삽입을 기다리는 중', 'warn', 3000);
+    }
+  });
+
+  // ─── 페이지 로드 시 자동 연결 (이전 권한 받은 포트가 있으면) ───
+  (async () => {
+    await new Promise(r => setTimeout(r, 500));
+    try {
+      const ports = await navigator.serial.getPorts();
+      if (ports.length > 0) {
+        console.log('승인된 포트 발견 — 자동 연결 시도');
+        await window.startCubelinkReader(ports[0]);
+      }
+    } catch(e) {
+      console.warn('자동 연결 실패:', e.message);
+    }
+  })();
+});
+
+/* ───────────────────────────────────────────────────────────
+   💎 연결 실패 시 단계별 안내 모달
+   ─────────────────────────────────────────────────────────── */
+function showConnectionTroubleshoot(errorMsg) {
+  // 기존 모달이 있으면 제거
+  const old = document.getElementById('cubelinkTroubleshoot');
+  if (old) old.remove();
+
+  // 에러 패턴에 따라 안내 우선순위 조정
+  const lowerErr = (errorMsg || '').toLowerCase();
+  let primaryHint = '';
+  if (lowerErr.includes('already open') || lowerErr.includes('failed to open')) {
+    primaryHint = '💡 가장 흔한 원인: USB를 뽑았다 꽂은 직후 발생. 5~10초 기다린 후 다시 시도하세요.';
+  } else if (lowerErr.includes('no port') || lowerErr.includes('notfound')) {
+    primaryHint = '💡 USB가 인식되지 않았습니다. 케이블을 다시 꽂거나 다른 USB 포트에 꽂아 보세요.';
+  } else if (lowerErr.includes('access denied') || lowerErr.includes('permission')) {
+    primaryHint = '💡 권한 거부. Chromebook이라면 학교 관리자에게 시리얼 정책 허용을 요청하세요.';
+  }
+
+  const modal = document.createElement('div');
+  modal.id = 'cubelinkTroubleshoot';
+  modal.style.cssText = `
+    position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7);
+    z-index:99999; display:flex; align-items:center; justify-content:center;`;
+  modal.innerHTML = `
+    <div style="background:#1a1a1a; border:1px solid #D4AF37; border-radius:10px; padding:24px; max-width:500px; width:90%; color:white;">
+      <h2 style="color:#D4AF37; margin:0 0 12px 0; font-size:18px;">🔌 로봇 연결 실패</h2>
+      ${primaryHint ? `<div style="background:#2a2a2a; padding:10px; border-radius:6px; margin-bottom:12px; font-size:13px; border-left:3px solid #D4AF37;">${primaryHint}</div>` : ''}
+      <div style="font-size:13px; line-height:1.7;">
+        <p style="margin:6px 0; color:#ccc;">다음을 순서대로 확인하세요:</p>
+        <ol style="padding-left:20px; margin:8px 0;">
+          <li>USB 케이블이 양쪽 끝까지 꽉 꽂혀 있나요?</li>
+          <li>Arduino IDE의 시리얼 모니터가 닫혀 있나요?</li>
+          <li>같은 사이트를 다른 브라우저 탭에서 열어두지 않았나요?</li>
+          <li>USB를 분리한 직후라면 5~10초 기다린 뒤 다시 시도</li>
+          <li>다른 USB 포트에 꽂아 보세요 (특히 USB 허브 사용 중이라면 PC 직접 연결)</li>
+          <li>그래도 안 되면 페이지를 새로고침(Ctrl+F5) 후 재시도</li>
+        </ol>
+        <details style="margin-top:12px;">
+          <summary style="cursor:pointer; color:#888; font-size:11px;">상세 오류 메시지 보기</summary>
+          <pre style="background:#0a0a0a; padding:8px; border-radius:4px; font-size:11px; color:#e74c3c; overflow-x:auto; margin-top:6px;">${errorMsg || '알 수 없는 오류'}</pre>
+        </details>
+      </div>
+      <div style="display:flex; gap:8px; margin-top:18px; justify-content:flex-end;">
+        <button id="ctsRetry" style="background:linear-gradient(135deg,#2ecc71,#27ae60);color:white;border:none;padding:8px 18px;border-radius:6px;cursor:pointer;font-weight:600;">🔄 다시 시도</button>
+        <button id="ctsClose" style="background:#444;color:white;border:none;padding:8px 18px;border-radius:6px;cursor:pointer;">닫기</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+
+  modal.querySelector('#ctsClose').onclick = () => modal.remove();
+  modal.querySelector('#ctsRetry').onclick = async () => {
+    modal.remove();
+    document.getElementById('btnConnectInit')?.click();
+  };
+}
+window.showConnectionTroubleshoot = showConnectionTroubleshoot;
+
+/* ───────────────────────────────────────────────────────────
+   💎 Blockly 리사이즈
+   ─────────────────────────────────────────────────────────── */
+window.addEventListener('load', () => {
   const triggerResize = () => {
     let ws = window.workspace || (typeof Blockly !== 'undefined' ? Blockly.mainWorkspace : null);
     if (!ws && typeof Blockly !== 'undefined' && typeof Blockly.getMainWorkspace === 'function') {
@@ -586,6 +784,7 @@ window.addEventListener('load', () => {
   setTimeout(triggerResize, 500);
 });
 </script>
+
 
 <script>
 /* ════════════════════════════════════════════════════════════════════
