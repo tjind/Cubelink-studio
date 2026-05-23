@@ -768,89 +768,106 @@ window.addEventListener('load', () => {
 </script>
 <script>
 /* ════════════════════════════════════════════════════════════════════
-   v2.8.1 — 플라이아웃(툴박스 미리보기) 내부에서도 드롭다운 조작 허용
-   기본 Blockly는 플라이아웃 블록을 비활성화 처리하여 드롭다운 클릭이 막힘.
-   아래 패치는 플라이아웃 안의 블록도 클릭/드롭다운이 가능하도록 풀어줌.
+   v2.8.1 — 플라이아웃 드롭다운 활성화 패치 (Blockly v9+ 대응)
+   최신 Blockly는 Gesture 시스템으로 플라이아웃 클릭을 처리하므로
+   pointerdown 단계에서 필드 클릭을 가로채 드롭다운 에디터를 직접 호출.
    ════════════════════════════════════════════════════════════════════ */
 (function() {
-  function patchFlyoutDropdowns() {
-    if (typeof Blockly === 'undefined' || !Blockly.Flyout) {
-      setTimeout(patchFlyoutDropdowns, 300);
+  'use strict';
+  let patched = false;
+
+  function getBlocklyVersion() {
+    if (typeof Blockly === 'undefined') return 'undefined';
+    return Blockly.VERSION || (Blockly.utils && Blockly.utils.VERSION) || 'unknown';
+  }
+
+  function findFieldFromTarget(target) {
+    // 클릭한 SVG 요소에서 부모를 따라 올라가며 Blockly Field를 찾음
+    let el = target;
+    while (el && el !== document) {
+      // Field SVG 그룹은 보통 'blocklyEditableText' 또는 'blocklyDropdown' 클래스
+      const cls = (el.getAttribute && el.getAttribute('class')) || '';
+      if (cls.includes('blocklyEditableText') ||
+          cls.includes('blocklyDropdown')) {
+        return el;
+      }
+      el = el.parentNode;
+    }
+    return null;
+  }
+
+  function findFieldInWorkspace(svgElement) {
+    // Blockly의 모든 워크스페이스를 뒤져 해당 SVG에 연결된 Field 객체 찾기
+    const allWs = (typeof Blockly.getAllWorkspaces === 'function')
+      ? Blockly.getAllWorkspaces()
+      : (Blockly.Workspace && Blockly.Workspace.getAll ? Blockly.Workspace.getAll() : []);
+    for (const ws of allWs) {
+      const blocks = ws.getAllBlocks ? ws.getAllBlocks(false) : [];
+      for (const block of blocks) {
+        if (!block.inputList) continue;
+        for (const input of block.inputList) {
+          for (const field of input.fieldRow) {
+            const root = field.getSvgRoot && field.getSvgRoot();
+            if (root && (root === svgElement || root.contains(svgElement))) {
+              return field;
+            }
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  function onPointerDownCapture(e) {
+    // 플라이아웃 안에서 발생한 이벤트만 처리
+    const flyoutEl = e.target.closest && e.target.closest('.blocklyFlyout');
+    if (!flyoutEl) return;
+
+    const fieldSvg = findFieldFromTarget(e.target);
+    if (!fieldSvg) return;  // 필드가 아닌 일반 블록 영역 클릭
+
+    const field = findFieldInWorkspace(fieldSvg);
+    if (!field) return;
+
+    // 드롭다운/숫자 입력 등 편집 가능한 필드만 동작
+    const isDropdown = field.constructor && field.constructor.name === 'FieldDropdown';
+    const isEditable = typeof field.showEditor_ === 'function';
+    if (!isDropdown && !isEditable) return;
+
+    // 드래그를 막고 에디터 즉시 호출
+    e.stopImmediatePropagation();
+    e.preventDefault();
+    try {
+      field.showEditor_(e);
+    } catch(err) {
+      try { field.showEditor_(); } catch(err2) {
+        console.warn('필드 에디터 호출 실패:', err2.message);
+      }
+    }
+  }
+
+  function applyPatch() {
+    if (patched) return;
+    if (typeof Blockly === 'undefined') {
+      setTimeout(applyPatch, 300);
       return;
     }
-
-    // 플라이아웃 내부 블록이 "비활성화 모드"로 렌더링되지 않도록 패치
-    if (Blockly.BlockSvg && Blockly.BlockSvg.prototype) {
-      const origIsInFlyout = Object.getOwnPropertyDescriptor(
-        Blockly.BlockSvg.prototype, 'isInFlyout'
-      );
-      // 일부 버전은 getter, 일부는 일반 속성이므로 안전 처리
-    }
-
-    // 핵심: 플라이아웃 블록의 마우스 다운 핸들러를 가로채서
-    // 필드(드롭다운/입력)를 클릭했을 때는 드래그 시작 대신 필드 동작 실행
-    const flyoutProto = Blockly.Flyout.prototype;
-    if (flyoutProto && !flyoutProto._cubelinkDropdownPatched) {
-      flyoutProto._cubelinkDropdownPatched = true;
-
-      const origBlockMouseDown = flyoutProto.blockMouseDown_;
-      flyoutProto.blockMouseDown_ = function(block) {
-        const wrapped = origBlockMouseDown.call(this, block);
-        return function(e) {
-          // 클릭한 대상이 필드(드롭다운 텍스트/화살표)인지 확인
-          let target = e.target;
-          let isField = false;
-          while (target && target !== block.svgGroup_) {
-            const cls = target.getAttribute && target.getAttribute('class');
-            if (cls && (
-              cls.includes('blocklyEditableText') ||
-              cls.includes('blocklyDropdownText') ||
-              cls.includes('blocklyText') && target.closest('.blocklyEditableText')
-            )) {
-              isField = true;
-              break;
-            }
-            target = target.parentNode;
-          }
-
-          if (isField) {
-            // 필드 클릭 → 드래그/복제 막고 드롭다운 열기
-            e.stopPropagation();
-            e.preventDefault();
-            // 클릭한 필드를 찾아서 showEditor 호출
-            for (const input of block.inputList) {
-              for (const field of input.fieldRow) {
-                if (field.SERIALIZABLE && (
-                    field instanceof Blockly.FieldDropdown ||
-                    field.constructor.name === 'FieldDropdown'
-                )) {
-                  const bbox = field.getSvgRoot && field.getSvgRoot().getBoundingClientRect();
-                  if (bbox &&
-                      e.clientX >= bbox.left && e.clientX <= bbox.right &&
-                      e.clientY >= bbox.top  && e.clientY <= bbox.bottom) {
-                    field.showEditor_();
-                    return;
-                  }
-                }
-              }
-            }
-            return;
-          }
-          // 일반 영역 클릭 → 기존 동작(드래그하여 작업공간으로 복제)
-          wrapped.call(this, e);
-        };
-      };
-      console.log('✅ 플라이아웃 드롭다운 패치 적용');
-    }
+    // capture 단계에서 가로채야 Blockly Gesture가 잡기 전에 처리됨
+    document.addEventListener('pointerdown', onPointerDownCapture, true);
+    document.addEventListener('mousedown',   onPointerDownCapture, true);
+    document.addEventListener('touchstart',  onPointerDownCapture, true);
+    patched = true;
+    console.log('✅ 플라이아웃 드롭다운 패치 적용 (Blockly ' + getBlocklyVersion() + ')');
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => setTimeout(patchFlyoutDropdowns, 500));
+    document.addEventListener('DOMContentLoaded', () => setTimeout(applyPatch, 500));
   } else {
-    setTimeout(patchFlyoutDropdowns, 500);
+    setTimeout(applyPatch, 500);
   }
 })();
 </script>
+
 
 </body>
 </html>
