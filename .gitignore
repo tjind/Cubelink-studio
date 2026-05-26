@@ -8,3 +8,14 @@ backup-*.zip
 *.bak
 Projects_Cubelink.txt
 patchEvent*
+
+# Capacitor / Node.js
+node_modules/
+package-lock.json
+.capacitor/
+
+
+# Capacitor / Node.js
+node_modules/
+.capacitor/
+
