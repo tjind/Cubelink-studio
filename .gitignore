@@ -3,3 +3,8 @@
 .DS_Store
 Thumbs.db
 backup-*.zip
+
+# 작업 잔여물 (커밋 제외)
+*.bak
+Projects_Cubelink.txt
+patchEvent*

@@ -4,9 +4,16 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no" />
   <link rel="manifest" href="manifest.json">
-  <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
-  <link rel="icon" href="data:,">
+    <!-- PWA: Icons & Theme -->
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <meta name="theme-color" content="#D4AF37">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="CUBELINK">
+
   <title>CUBELINK Studio v2.8.3 · The Pinnacle of Robot Education</title>
 
   <!-- SEO -->
@@ -1229,6 +1236,24 @@ window.addEventListener('load', () => {
   }
 })();
 </script>
+
+
+    <!-- PWA: Service Worker 등록 -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js')
+            .then((reg) => {
+              console.log('[PWA] Service Worker 등록 성공:', reg.scope);
+            })
+            .catch((err) => {
+              console.warn('[PWA] Service Worker 등록 실패:', err);
+            });
+        });
+      } else {
+        console.log('[PWA] 이 브라우저는 Service Worker를 지원하지 않습니다.');
+      }
+    </script>
 
 </body>
 </html>
