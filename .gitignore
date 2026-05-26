@@ -19,3 +19,16 @@ package-lock.json
 node_modules/
 .capacitor/
 
+
+# Capacitor build output
+dist/
+
+# Android build cache (large files, do not commit)
+android/build/
+android/app/build/
+android/.gradle/
+android/local.properties
+android/captures/
+android/.idea/
+android/app/release/
+
