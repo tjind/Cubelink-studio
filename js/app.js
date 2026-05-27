@@ -1125,33 +1125,102 @@
   /* ============================================================
      공통 실행 엔진 (실시간 + 시뮬레이션) — 안전장치 포함
      ============================================================ */
-  async function runProgram() {
-    const simOnly = window._simulationOnly === true;
-    window._simulationOnly = false;
-    const port = window._serialPort;
-    const useSerial = !simOnly && port && port.writable;
+async function runProgram() {
+  // --- v2.8.6 mode-merge (actionMode SoT) ---
+  // ─── 동작 모드 통합 (v2.8.6) ───
+  // actionMode를 단일 진실 원천(SoT)으로 사용
+  const mode = window.actionMode || 'real';
+  const useSerial = (mode === 'real' || mode === 'twin')
+                    && window._serialPort
+                    && window._serialPort.writable;
+  const updateGraphic = (mode === 'sim' || mode === 'twin');
+  window._simulationOnly = (mode === 'sim');
 
-    // 안전장치
-    let loopCount = 0;
-    const MAX_TOTAL_LOOPS = 100000;
-    let startTime = performance.now();
-    let warnedTooFast = false;
+  // 안전장치
+  let loopCount = 0;
+  const MAX_TOTAL_LOOPS = 100000;
+  let startTime = performance.now();
+  let warnedTooFast = false;
 
-    function safeAngle(pin, angle, blockType) {
-      const a = parseFloat(angle);
-      if (isNaN(a)) {
-        appendSerialLog(`⚠️ [${blockType}] PIN ${pin}: 각도값이 숫자가 아님 (${angle}) → 무시`);
-        return null;
-      }
-      if (a < 0 || a > 180) {
-        const clamped = Math.max(0, Math.min(180, a));
-        appendSerialLog(`⚠️ [${blockType}] PIN ${pin}: 각도 ${Math.round(a)}° → ${Math.round(clamped)}°로 보정`);
-        return clamped;
-      }
-      return a;
+  function safeAngle(pin, angle, blockType) {
+    const a = parseFloat(angle);
+    if (isNaN(a)) {
+      appendSerialLog(`⚠️ [${blockType}] PIN ${pin}: 각도값이 숫자가 아님 (${angle}) → 무시`);
+      return null;
     }
+    if (a < 0 || a > 180) {
+      const clamped = Math.max(0, Math.min(180, a));
+      appendSerialLog(`⚠️ [${blockType}] PIN ${pin}: 각도 ${Math.round(a)}° → ${Math.round(clamped)}°로 보정`);
+      return clamped;
+    }
+    return a;
+  }
 
-    if (!simOnly && !useSerial) {
+  // 실물 모드인데 포트가 없으면 확인
+  if (mode === 'real' && !useSerial) {
+    if (!confirm("로봇이 연결되지 않았습니다. 3D 시뮬레이션만 실행할까요?")) return;
+  }
+
+  // 이미 실행 중이면 중단 토글
+  if (window._runtimeRunning) {
+    window._runtimeRunning = false;
+    appendSerialLog("⏹ 중단 요청");
+    return;
+  }
+  window._runtimeRunning = true;
+
+  const writer = useSerial ? window._serialPort.writable.getWriter() : null;
+  const enc = new TextEncoder();
+  const btnRT = document.getElementById('btnRunRealtime');
+  const originalText = btnRT ? btnRT.textContent : '';
+  if (btnRT) btnRT.textContent = '⏹ 실행 중 (클릭하여 중단)';
+
+  const simStatusEl = document.getElementById('simStatus');
+  if (simStatusEl) { simStatusEl.textContent = '● 실행 중'; simStatusEl.classList.add('running'); }
+
+  const setupRoot = workspace.getBlocksByType('arduino_setup_loop')[0];
+  if (!setupRoot) {
+    appendSerialLog("⚠️ setup/loop 블록이 없습니다");
+    window._runtimeRunning = false;
+    if (btnRT) btnRT.textContent = originalText;
+    try { if (writer) writer.releaseLock(); } catch(_){}
+    if (simStatusEl) { simStatusEl.textContent = '● 대기 중'; simStatusEl.classList.remove('running'); }
+    return;
+  }
+
+  const setupChain = setupRoot.getInputTargetBlock('SETUP');
+  const loopChain  = setupRoot.getInputTargetBlock('LOOP');
+
+  const chainToArray = (head) => {
+    const arr = [];
+    let cur = head;
+    while (cur) { arr.push(cur); cur = cur.getNextBlock(); }
+    return arr;
+  };
+
+  // ─── 서보 전송 공통: useSerial / updateGraphic 분기 적용 ───
+  async function sendServo(pin, angle) {
+    if (useSerial && writer) {
+      try { await writer.write(enc.encode(`S,${pin},${angle}\n`)); }
+      catch(e) { appendSerialLog(`❌ 시리얼 전송 오류: ${e.message}`); }
+    }
+    if (updateGraphic && window.Sim) {
+      if (updateGraphic && window.Sim) Sim.setServoAngle(pin, angle);
+    }
+    window.servoAngles[pin] = angle;
+    if (window.MissionProgress) {
+      MissionProgress.onSimEvent({ type: 'servo', pin: parseInt(pin), angle: parseFloat(angle) });
+    }
+  }
+
+  // ↓↓↓ 이하 execBlock 정의는 기존 코드 그대로 유지하되,
+  //     "if (writer) await writer.write(...)" 부분 두 군데를
+  //     "if (useSerial && writer) await writer.write(...)" 로 바꿔주세요.
+  //     해당 위치: cubelink_digitalwrite 블록, cubelink_joystick_init,
+  //               cubelink_v2_joystick_init 세 곳입니다.
+
+
+    if (mode === "real" && !useSerial) {
       if (!confirm("로봇이 연결되지 않았습니다. 3D 시뮬레이션만 실행할까요?")) return;
     }
 
@@ -1163,7 +1232,7 @@
     }
     window._runtimeRunning = true;
 
-    const writer = useSerial ? port.writable.getWriter() : null;
+    const writer = useSerial ? window._serialPort.writable.getWriter() : null;
     const enc = new TextEncoder();
     const btnRT = document.getElementById('btnRunRealtime');
     const originalText = btnRT ? btnRT.textContent : '';
@@ -1307,7 +1376,7 @@
         if (t === 'cubelink_digitalwrite') {
           const pin = b.getFieldValue('PIN');
           const val = b.getFieldValue('VAL') === 'HIGH' ? 1 : 0;
-          if (writer) await writer.write(enc.encode(`L,${pin},${val}\n`));
+          if (useSerial && writer) await writer.write(enc.encode(`L,${pin},${val}\n`));
           // PIN 13 LED UI 반영
           if (pin === '13') {
             const led = document.getElementById('led13');
@@ -1357,7 +1426,7 @@
           const vry  = b.getFieldValue('VRY');
           const sw   = b.getFieldValue('SW');
           appendSerialLog(`🕹 조이스틱(${name}) 초기화 VRx=${vrx} VRy=${vry} SW=${sw}`);
-          if (writer) await writer.write(enc.encode(`J,INIT,${name},${vrx},${vry},${sw}\n`));
+          if (useSerial && writer) await writer.write(enc.encode(`J,INIT,${name},${vrx},${vry},${sw}\n`));
           return;
         }
 
@@ -1369,7 +1438,7 @@
           const vry  = b.getFieldValue('VRY');
           const sw   = b.getFieldValue('SW');
           appendSerialLog(`🕹 v2 조이스틱(${name}) 초기화 VRx=${vrx} VRy=${vry} SW=${sw}`);
-          if (writer) await writer.write(enc.encode(`J,INIT,${name},${vrx},${vry},${sw}\n`));
+          if (useSerial && writer) await writer.write(enc.encode(`J,INIT,${name},${vrx},${vry},${sw}\n`));
           return;
         }
 
@@ -1627,18 +1696,6 @@
       setTimeout(triggerResize, 150);
     });
 
-    document.getElementById('btnRunRealtime')?.addEventListener('click', () => runProgram());
-
-    document.getElementById('btnSimStart')?.addEventListener('click', () => {
-      window._simulationOnly = true;
-      runProgram();
-    });
-
-    document.getElementById('btnSimStop')?.addEventListener('click', () => {
-      window._runtimeRunning = false;
-      const status = document.getElementById('simStatus');
-      if (status) { status.textContent = '● 정지됨'; status.classList.remove('running'); }
-    });
   }
   /* ============================================================
      orphan 블록 자동 경고 (v2.8.0)
