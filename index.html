@@ -1028,8 +1028,6 @@ window.addEventListener('load', () => {
   function updateRunButton() {
     const btn = document.getElementById('btnRunRealtime');
     if (!btn) return;
-    if (window._runtimeRunning) return;  // ← 추가: 실행 중엔 라벨 변경 금지
-
     if (window.actionMode === 'twin') {
       btn.classList.add('twin-mode');
       btn.textContent = '🔄 디지털 트윈 실행';
@@ -1064,39 +1062,21 @@ window.addEventListener('load', () => {
     return true;
   };
 
-function bindRunButtons() {
-  const btnSim = document.getElementById('btnSimStart');
-  const btnRun = document.getElementById('btnRunRealtime');
-  const btnStop = document.getElementById('btnSimStop');
-
-  if (btnSim && btnSim.dataset.modeBound !== '1') {
-    btnSim.dataset.modeBound = '1';
-    btnSim.addEventListener('click', () => {
-      window.setActionMode('sim', { silent: true });
-      if (typeof window.runProgram === 'function') window.runProgram();
-    });
+  function bindRunButtons() {
+    const btnSim = document.getElementById('btnSimStart');
+    const btnRun = document.getElementById('btnRunRealtime');
+    if (btnSim && btnSim.dataset.modeBound !== '1') {
+      btnSim.dataset.modeBound = '1';
+      btnSim.addEventListener('click', () => { window.setActionMode('sim', { silent:false }); }, true);
+    }
+    if (btnRun && btnRun.dataset.modeBound !== '1') {
+      btnRun.dataset.modeBound = '1';
+      btnRun.addEventListener('click', () => {
+        const target = window.twinUnlocked ? 'twin' : 'real';
+        window.setActionMode(target, { silent:false });
+      }, true);
+    }
   }
-  if (btnRun && btnRun.dataset.modeBound !== '1') {
-    btnRun.dataset.modeBound = '1';
-    btnRun.addEventListener('click', () => {
-      // 이미 실행 중이면 정지 동작 (runProgram 자체가 토글이라 그대로 위임)
-      if (window._runtimeRunning) {
-        if (typeof window.runProgram === 'function') window.runProgram();
-        return;
-      }
-      const target = window.twinUnlocked ? 'twin' : 'real';
-      window.setActionMode(target, { silent: true });
-      if (typeof window.runProgram === 'function') window.runProgram();
-    });
-  }
-  if (btnStop && btnStop.dataset.modeBound !== '1') {
-    btnStop.dataset.modeBound = '1';
-    btnStop.addEventListener('click', () => {
-      window._runtimeRunning = false;
-      // 라벨 복원은 runProgram()의 finally가 처리하게 둠
-    });
-  }
-}
 
   window.unlockTwinMode = function() {
     if (window.twinUnlocked) {
