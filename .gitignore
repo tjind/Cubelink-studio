@@ -32,3 +32,11 @@ android/captures/
 android/.idea/
 android/app/release/
 
+
+# Patch attempt backups (local only)
+archive/
+*.bak_*
+*.before_*
+*.broken_*
+*.recover
+_remote_*.tmp.js
