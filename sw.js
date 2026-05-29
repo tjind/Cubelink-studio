@@ -1,9 +1,11 @@
-/* CUBELINK Studio Service Worker v2.8.5
- * 캐시 전략: Cache First (정적 파일)
+/* CUBELINK Studio Service Worker v2.8.6
+ * 캐시 전략:
+ *   - HTML과 sw.js 자체: Network First (항상 최신 시도, 실패 시 캐시)
+ *   - CSS/JS/이미지 등 정적 파일: Cache First (빠른 로딩)
  * 업데이트 시 CACHE_VERSION 값을 올려야 사용자에게 새 버전이 적용됩니다.
  */
 
-const CACHE_VERSION = 'cubelink-v2.8.5-meeting';
+const CACHE_VERSION = 'cubelink-v2.8.6';
 
 // 앱 설치 시 미리 받아둘 핵심 파일 목록
 const PRECACHE_URLS = [
@@ -45,32 +47,57 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// 3. 요청 처리: Cache First 전략
+// 3. 요청 처리: HTML/sw.js는 Network First, 나머지는 Cache First
 self.addEventListener('fetch', (event) => {
   const req = event.request;
 
-  // GET 요청만 처리 (POST 등은 그대로 통과)
+  // GET 요청만 처리
   if (req.method !== 'GET') return;
 
-  // chrome-extension:// 등 http(s) 외 스킴은 무시
+  // http(s) 외 스킴(chrome-extension:// 등) 무시
   if (!req.url.startsWith('http')) return;
 
+  const url = new URL(req.url);
+
+  // sw.js 자체는 절대 캐시하지 않음 (항상 네트워크에서 받아 새 버전 감지)
+  if (url.pathname.endsWith('/sw.js')) {
+    event.respondWith(fetch(req));
+    return;
+  }
+
+  // HTML 요청은 Network First (항상 최신 시도, 실패 시에만 캐시)
+  const isHTML = req.mode === 'navigate'
+              || (req.headers.get('accept') || '').includes('text/html')
+              || url.pathname.endsWith('.html')
+              || url.pathname.endsWith('/');
+
+  if (isHTML) {
+    event.respondWith(
+      fetch(req).then((response) => {
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_VERSION).then((cache) => cache.put(req, clone));
+        }
+        return response;
+      }).catch(() =>
+        caches.match(req).then((cached) => cached || caches.match('./index.html'))
+      )
+    );
+    return;
+  }
+
+  // CSS/JS/이미지 등 정적 파일: Cache First (기존 전략 유지)
   event.respondWith(
     caches.match(req).then((cached) => {
-      // 캐시에 있으면 즉시 반환
       if (cached) return cached;
-
-      // 없으면 네트워크에서 가져오고, 성공하면 캐시에 저장
       return fetch(req).then((response) => {
-        // 정상 응답만 캐시 (200 OK, 같은 도메인)
         if (response.ok && response.type === 'basic') {
           const clone = response.clone();
           caches.open(CACHE_VERSION).then((cache) => cache.put(req, clone));
         }
         return response;
       }).catch(() => {
-        // 네트워크 실패 시: HTML 요청이면 index.html이라도 보여주기
-        if (req.headers.get('accept')?.includes('text/html')) {
+        if ((req.headers.get('accept') || '').includes('text/html')) {
           return caches.match('./index.html');
         }
       });
