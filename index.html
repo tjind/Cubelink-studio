@@ -14,7 +14,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CUBELINK">
 
-  <title>CUBELINK Studio v2.8.6 · The Pinnacle of Robot Education</title>
+  <title>CUBELINK Studio v2.8.7 · The Pinnacle of Robot Education</title>
 
   <!-- SEO -->
   <meta name="description" content="CUBELINK Studio - 학생을 위한 무료 로봇팔 블록 코딩 학습 도구. 9단계 미션, 3D 시뮬레이터, 아두이노 실시간 제어를 한 곳에서.">
@@ -50,7 +50,7 @@
   <button class="btn hamburger-btn" id="btnHamburger" title="미션 목록 열기/닫기">☰</button>
   <div class="brand">
     <div class="brand-logo">TJ</div>
-    <div class="brand-title">CUBELINK STUDIO<span class="brand-version">v2.8.6</span></div>
+    <div class="brand-title">CUBELINK STUDIO<span class="brand-version">v2.8.7</span></div>
   </div>
 
   <div class="header-actions">
@@ -279,7 +279,7 @@
 
 
 <!-- ════════════════════════════════════════════════════════════════
-     CUBELINK Studio v2.8.6 — CH340 + Chromebook 재연결 안정화
+     CUBELINK Studio v2.8.7 — CH340 + Chromebook 재연결 안정화
      ──────────────────────────────────────────────────────────────
      • USB 분리 시 reader/port 완전 해제 (좀비 객체 방지)
      • navigator.serial 전역 connect/disconnect 이벤트 청취
@@ -870,7 +870,7 @@ window.addEventListener('load', () => {
     }, 150);
   });
 
-  console.log('🎮 v2.8.6 인터랙티브 조이스틱 시뮬 로드됨');
+  console.log('🎮 v2.8.7 인터랙티브 조이스틱 시뮬 로드됨');
 })();
 </script>
 
@@ -909,6 +909,55 @@ window.addEventListener('load', () => {
   window.addEventListener('resize', fitToViewport);
 })();
 </script>
+
+
+<!-- ════════════════════════════════════════════════════════════════
+     v2.8.7 — 자동 반응형 (3D 뷰 컨테이너 크기 변경 감지)
+     ════════════════════════════════════════════════════════════════ -->
+<script>
+(function() {
+  'use strict';
+
+  // 3D 뷰 컨테이너의 크기가 (미디어 쿼리/clamp 등으로) 바뀌면
+  // simulator3D.js의 onResize가 자동 호출되도록 window resize 이벤트를 발사
+  function triggerResize() {
+    if (typeof window.dispatchEvent === 'function') {
+      window.dispatchEvent(new Event('resize'));
+    }
+  }
+
+  function attachObserver() {
+    const view = document.getElementById('robot-3d-view');
+    if (!view) return false;
+    if (typeof ResizeObserver === 'undefined') return false;
+
+    let lastW = 0, lastH = 0;
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const cr = entry.contentRect;
+        // 의미 있는 크기 변화만 (1px 미만 무시)
+        if (Math.abs(cr.width - lastW) < 1 && Math.abs(cr.height - lastH) < 1) continue;
+        lastW = cr.width;
+        lastH = cr.height;
+        triggerResize();
+      }
+    });
+    ro.observe(view);
+    console.log('[v2.8.7] 3D 뷰 ResizeObserver 활성화');
+    return true;
+  }
+
+  // 로드 직후 시도, 안 되면 잠시 후 재시도 (simulator3D.js 늦게 init되는 경우)
+  window.addEventListener('load', () => {
+    if (!attachObserver()) {
+      setTimeout(attachObserver, 500);
+      setTimeout(attachObserver, 1500);
+    }
+  });
+})();
+</script>
+
+
 
 
 <!-- ════════════════════════════════════════════════════════════════
@@ -1149,7 +1198,7 @@ window.addEventListener('load', () => {
       return;
     }
     if (matches(cmd, CMD_VERSION)) {
-      appendToMonitor('CUBELINK Studio v2.8.6', '#3498db');
+      appendToMonitor('CUBELINK Studio v2.8.7', '#3498db');
       return;
     }
 
@@ -1225,7 +1274,7 @@ window.addEventListener('load', () => {
     bindCommandInput();
     patchParseBoardLine();
     updateRunButton();
-    console.log('🔀 v2.8.6 동작 모드 + 명령어 시스템 로드됨 (기본: real)');
+    console.log('🔀 v2.8.7 동작 모드 + 명령어 시스템 로드됨 (기본: real)');
     console.log('💡 강사용: 시리얼 모니터 입력창에 비밀 단어를 입력하면 디지털 트윈 해제');
   }
 
@@ -1238,7 +1287,7 @@ window.addEventListener('load', () => {
 </script>
 
 
-     <!-- PWA: Service Worker 등록 (v2.8.6: 자동 업데이트 감지) -->
+     <!-- PWA: Service Worker 등록 (v2.8.7: 자동 업데이트 감지) -->
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {

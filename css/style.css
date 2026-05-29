@@ -432,3 +432,41 @@ body.graduated #serialMonitorBar.collapsed { height: 36px; }
 .cubelink-toast.success { border-color: #2ecc71; box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 20px rgba(46,204,113,0.4); }
 .cubelink-toast.warn    { border-color: #f39c12; box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 20px rgba(243,156,18,0.4); }
 .cubelink-toast.info    { border-color: #3498db; box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 20px rgba(52,152,219,0.4); }
+
+
+
+/* ════════════════════════════════════════════════════════════════
+   v2.8.7 — 자동 반응형 레이아웃 (모든 해상도 자동 맞춤)
+   ════════════════════════════════════════════════════════════════ */
+
+/* 3D 로봇팔 뷰: 화면 높이에 비례 (최소 120 / 최대 240) */
+#robot-3d-view {
+  height: clamp(120px, 22vh, 240px) !important;
+  min-height: 120px !important;
+}
+
+/* 우측 사이드바 자체 스크롤 (페이지 전체 스크롤 방지) */
+.panel-right {
+  min-height: 0;
+}
+.tab-body {
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+  max-height: 100%;
+}
+
+/* sim-stage가 flex 자식들을 자연스럽게 축소시키게 */
+.sim-stage {
+  min-height: 0;
+}
+
+/* 작은 화면(노트북/크롬북): 시리얼 모니터 자동 축소 */
+@media (max-height: 720px) {
+  #serialMonitorBar { height: 140px; }
+  body.graduated #serialMonitorBar { height: 140px; }
+}
+@media (max-height: 600px) {
+  #serialMonitorBar { height: 100px; }
+  body.graduated #serialMonitorBar { height: 100px; }
+}
