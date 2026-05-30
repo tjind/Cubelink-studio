@@ -1193,15 +1193,20 @@
     };
 
     // ─── 서보 전송 공통 ───
-    async function sendServo(pin, angle) {
-      if (writer) {
-        try { await writer.write(enc.encode(`S,${pin},${angle}\n`)); }
-        catch(e) { appendSerialLog(`❌ 시리얼 전송 오류: ${e.message}`); }
-      }
-      if (window.Sim) Sim.setServoAngle(pin, angle);
-      window.servoAngles[pin] = angle;
-       if (window.MissionProgress) MissionProgress.onSimEvent({ type: 'servo', pin: parseInt(pin), angle: parseFloat(angle) });
-    }
+async function sendServo(pin, angle) {
+  // v2.8.9: 모드별 분기
+  const sendReal = !window.shouldSendToRobot   || window.shouldSendToRobot();
+  const sendSim  = !window.shouldUpdateGraphic || window.shouldUpdateGraphic();
+
+  if (sendReal && writer) {
+    try { await writer.write(enc.encode(`S,${pin},${angle}\n`)); }
+    catch(e) { appendSerialLog(`시리얼 전송 오류: ${e.message}`); }
+  }
+  if (sendSim && window.Sim) Sim.setServoAngle(pin, angle);
+  window.servoAngles[pin] = angle;
+  if (window.MissionProgress) MissionProgress.onSimEvent({ type: 'servo', pin: parseInt(pin), angle: parseFloat(angle) });
+}
+
 
     // ─── 단일 블록 실행 ───
     const execBlock = async (b) => {

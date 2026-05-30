@@ -40,3 +40,10 @@ archive/
 *.broken_*
 *.recover
 _remote_*.tmp.js
+
+# v2.8.9 작업 중 추가
+_archive/
+*.before_*
+*.v289_*
+_diag_*.txt
+_handover_*.txt

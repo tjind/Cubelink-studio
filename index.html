@@ -1291,7 +1291,7 @@ window.addEventListener('load', () => {
     window.parseBoardLine = function(line) {
       if (!line) return;
       const head = String(line).trim().split(',')[0];
-      const graphicMsgs = ['A', 'J1', 'J2', 'U'];
+      const graphicMsgs = ['A'];
       if (graphicMsgs.includes(head) && !window.shouldUpdateGraphic()) return;
       return origParse.call(this, line);
     };

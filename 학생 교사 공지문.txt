@@ -1,0 +1,19 @@
+
+nothing to commit, working tree clean
+PS C:\Projects\CubelinkApp\www> $remote = Invoke-WebRequest -Uri "https://tjind.github.io/Cubelink-studio/sw.js?nocache=$(Get-Random)" -UseBasicParsing
+>> 
+PS C:\Projects\CubelinkApp\www> ($remote.Content -split "`n") | Select-String 'CACHE_VERSION\s*='
+>> 
+
+const CACHE_VERSION = 'cubelink-v2.8.8';
+
+
+PS C:\Projects\CubelinkApp\www> $remoteHtml = Invoke-WebRequest -Uri "https://tjind.github.io/Cubelink-studio/index.html?nocache=$(Get-Random)" -UseBasicParsing
+>> 
+PS C:\Projects\CubelinkApp\www> ($remoteHtml.Content -split "`n") | Select-String 'brand-version'
+>> 
+
+    <div class="brand-title">CUBELINK STUDIO<span class="brand-version">v2.8.8</span></div>
+
+
+PS C:\Projects\CubelinkApp\www> 
