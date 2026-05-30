@@ -1165,7 +1165,7 @@
 
     const writer = useSerial ? port.writable.getWriter() : null;
     const enc = new TextEncoder();
-    const btnRT = document.getElementById('btnRunRealtime');
+    const btnRT = document.getElementById(simOnly ? 'btnSimStart' : 'btnRunRealtime');
     const originalText = btnRT ? btnRT.textContent : '';
     if (btnRT) btnRT.textContent = '⏹ 실행 중 (클릭하여 중단)';
 
@@ -1519,12 +1519,13 @@
           await execChain(loopArr);
           const bodyDuration = performance.now() - beforeBody;
 
-          // 안전 2: 매 루프 강제 yield + 너무 빠르면 자동 지연
-          if (bodyDuration < 5) {
-            await new Promise(r => setTimeout(r, 10));
-          } else {
-            await new Promise(r => setTimeout(r, 0));
+            // 안전 2 (v2.8.8): 매 루프 무조건 양보 (브라우저 응답성 보장)
+          await new Promise(r => setTimeout(r, bodyDuration < 5 ? 10 : 1));
+          // 추가: 100회마다 1프레임 양보 (장시간 실행 시 메모리/렌더 안정성)
+          if (loopCount % 100 === 0) {
+            await new Promise(r => requestAnimationFrame(r));
           }
+  
 
           // 안전 3: 빠른 루프 경고 (한 번만)
           const elapsedSec = (performance.now() - startTime) / 1000;
@@ -1627,7 +1628,13 @@
       setTimeout(triggerResize, 150);
     });
 
-    document.getElementById('btnRunRealtime')?.addEventListener('click', () => runProgram());
+    document.getElementById('btnRunRealtime')?.addEventListener('click', () => {
+      if (!window._serialPort || !window._serialPort.writable) {
+        alert('로봇이 연결되지 않았습니다.\n시뮬레이션 시작 단추를 누르세요');
+        return;
+      }
+      runProgram();
+    });
 
     document.getElementById('btnSimStart')?.addEventListener('click', () => {
       window._simulationOnly = true;

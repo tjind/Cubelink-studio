@@ -470,3 +470,19 @@ body.graduated #serialMonitorBar.collapsed { height: 36px; }
   #serialMonitorBar { height: 100px; }
   body.graduated #serialMonitorBar { height: 100px; }
 }
+
+/* ════════════════════════════════════════════════════════════════
+   v2.8.8 — 포트 미연결 시 실시간 실행 버튼 비활성화 표시
+   ════════════════════════════════════════════════════════════════ */
+#btnRunRealtime:disabled,
+#btnRunRealtime.disconnected {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background: linear-gradient(135deg, #555, #333) !important;
+  color: #999 !important;
+  filter: grayscale(0.6);
+}
+#btnRunRealtime.disconnected:hover {
+  transform: none;
+  box-shadow: none;
+}
