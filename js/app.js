@@ -1168,6 +1168,8 @@
     const btnRT = document.getElementById(simOnly ? 'btnSimStart' : 'btnRunRealtime');
     const originalText = btnRT ? btnRT.textContent : '';
     if (btnRT) btnRT.textContent = '⏹ 실행 중 (클릭하여 중단)';
+        const btnOther = document.getElementById(simOnly ? 'btnRunRealtime' : 'btnSimStart');
+    if (btnOther) { btnOther.disabled = true; btnOther.style.opacity = '0.4'; btnOther.style.cursor = 'not-allowed'; }
 
     const simStatusEl = document.getElementById('simStatus');
     if (simStatusEl) { simStatusEl.textContent = '● 실행 중'; simStatusEl.classList.add('running'); }
@@ -1196,7 +1198,7 @@
 async function sendServo(pin, angle) {
   // v2.8.9: 모드별 분기
   const sendReal = !window.shouldSendToRobot   || window.shouldSendToRobot();
-  const sendSim  = !window.shouldUpdateGraphic || window.shouldUpdateGraphic();
+  const sendSim  = simOnly || !window.shouldUpdateGraphic || window.shouldUpdateGraphic();
 
   if (sendReal && writer) {
     try { await writer.write(enc.encode(`S,${pin},${angle}\n`)); }
@@ -1547,6 +1549,7 @@ async function sendServo(pin, angle) {
     } finally {
       window._runtimeRunning = false;
       if (btnRT) btnRT.textContent = originalText;
+            if (btnOther) { btnOther.disabled = false; btnOther.style.opacity = ''; btnOther.style.cursor = ''; }
       try { if (writer) writer.releaseLock(); } catch(_) {}
       if (simStatusEl) { simStatusEl.textContent = '● 대기 중'; simStatusEl.classList.remove('running'); }
       const totalSec = ((performance.now() - startTime) / 1000).toFixed(1);
