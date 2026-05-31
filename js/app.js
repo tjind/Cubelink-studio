@@ -496,6 +496,7 @@
         checkGraduation() {
       const allDone = this.done.size >= MISSIONS.length;
       document.body.classList.toggle('graduated', allDone);
+      if (allDone && window.showAllMissionsComplete) window.showAllMissionsComplete();
 
       // 시리얼 모니터 위치 동적 이동
       const monitor = document.getElementById('serialMonitorBar');
