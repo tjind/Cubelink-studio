@@ -70,6 +70,7 @@
   function restorePanel() {
     // 졸업 모드 해제 → CSS가 자동으로 panel-left 복원
     document.body.classList.remove('graduated');
+    window._graduationRestored = true;  // v2.8.10: 학생이 복원 의사 표시
     // 시리얼 모니터를 다시 panel-left 하단으로 복귀
     const monitor = document.getElementById('serialMonitorBar');
     const panelLeft = document.querySelector('.panel-left');
