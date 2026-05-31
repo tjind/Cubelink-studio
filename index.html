@@ -14,7 +14,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CUBELINK">
 
-  <title>CUBELINK Studio v2.8.8 · The Pinnacle of Robot Education</title>
+  <title>CUBELINK Studio v2.8.9 · The Pinnacle of Robot Education</title>
 
   <!-- SEO -->
   <meta name="description" content="CUBELINK Studio - 학생을 위한 무료 로봇팔 블록 코딩 학습 도구. 9단계 미션, 3D 시뮬레이터, 아두이노 실시간 제어를 한 곳에서.">
@@ -50,7 +50,7 @@
   <button class="btn hamburger-btn" id="btnHamburger" title="미션 목록 열기/닫기">☰</button>
   <div class="brand">
     <div class="brand-logo">TJ</div>
-    <div class="brand-title">CUBELINK STUDIO<span class="brand-version">v2.8.8</span></div>
+    <div class="brand-title">CUBELINK STUDIO<span class="brand-version">v2.8.9</span></div>
   </div>
 
   <div class="header-actions">
@@ -280,7 +280,7 @@
 
 
 <!-- ════════════════════════════════════════════════════════════════
-     CUBELINK Studio v2.8.8 — CH340 + Chromebook 재연결 안정화
+     CUBELINK Studio v2.8.9 — CH340 + Chromebook 재연결 안정화
      ──────────────────────────────────────────────────────────────
      • USB 분리 시 reader/port 완전 해제 (좀비 객체 방지)
      • navigator.serial 전역 connect/disconnect 이벤트 청취
@@ -355,7 +355,7 @@ window.parseBoardLine = function(line) {
 
 window._connState = 'idle';
 window._reconnecting = false;
-window._autoReconnect = true;
+window._autoReconnect =  false;  // v2.8.9: brown-out 무한 루프 차단 — 수동 재연결만 허용
 
 window.setConnectionState = function(state) {
   const btn = document.getElementById('btnConnectInit');
@@ -365,7 +365,7 @@ window.setConnectionState = function(state) {
     idle:       { text:'🔌 로봇 연결 및 초기화 (90도)', bg:'linear-gradient(135deg, #2ecc71, #27ae60)', border:'#27ae60', title:'로봇을 연결합니다.', disabled:false },
     connecting: { text:'⏳ 연결 중...',                 bg:'linear-gradient(135deg, #95a5a6, #7f8c8d)', border:'#7f8c8d', title:'연결 중...',           disabled:true },
     connected:  { text:'✅ 연결됨 — 해제하려면 클릭',   bg:'linear-gradient(135deg, #3498db, #2980b9)', border:'#2980b9', title:'연결 해제',            disabled:false },
-    lost:       { text:'⚠️ 연결 끊김 — 재연결 시도 중', bg:'linear-gradient(135deg, #f39c12, #e67e22)', border:'#e67e22', title:'USB 재삽입 대기',      disabled:false },
+    lost:       { text:'⚠️ 연결 끊김 — 클릭하여 재연결', bg:'linear-gradient(135deg, #f39c12, #e67e22)', border:'#e67e22', title:'USB를 다시 꽂고 클릭하세요', disabled:false },
     failed:     { text:'❌ 연결 실패 — 클릭하여 재시도', bg:'linear-gradient(135deg, #e74c3c, #c0392b)', border:'#c0392b', title:'다시 시도하세요',     disabled:false },
   };
   const s = states[state] || states.idle;
@@ -661,6 +661,7 @@ window.addEventListener('load', () => {
     if (!window._autoReconnect) return;
     if (window._connState === 'connected' || window._connState === 'connecting') return;
 
+    window._runtimeRunning = false;  // v2.8.9: 자동 재연결 시 실행 중단
     await window.fullCleanup({ silent: true });
     setConnectionState('connecting');
     await new Promise(r => setTimeout(r, 1500));
@@ -689,6 +690,7 @@ window.addEventListener('load', () => {
   /* 전역 disconnect 이벤트 */
   navigator.serial.addEventListener('disconnect', async (e) => {
     console.warn('🔌 navigator.serial.disconnect 이벤트:', e.target);
+    window._runtimeRunning = false;  // v2.8.9: USB 분리 시 실행 즉시 중단
     setConnectionState('lost');
     await window.fullCleanup({ silent: true });
     setConnectionState('lost');
@@ -697,7 +699,8 @@ window.addEventListener('load', () => {
     }
   });
 
-  /* 페이지 로드 시 자동 연결 */
+  /* v2.8.9: 페이지 로드 시 자동 연결 비활성화 — 사용자가 [연결] 버튼을 직접 눌러야 함 */
+  /*
   (async () => {
     await new Promise(r => setTimeout(r, 500));
     try {
@@ -710,6 +713,8 @@ window.addEventListener('load', () => {
       console.warn('자동 연결 실패:', e.message);
     }
   })();
+  */
+
 });
 
 /* Blockly 리사이즈 */
@@ -871,7 +876,7 @@ window.addEventListener('load', () => {
     }, 150);
   });
 
-  console.log('🎮 v2.8.8 인터랙티브 조이스틱 시뮬 로드됨');
+  console.log('🎮 v2.8.9 인터랙티브 조이스틱 시뮬 로드됨');
 })();
 </script>
 
@@ -913,7 +918,7 @@ window.addEventListener('load', () => {
 
 
 <!-- ════════════════════════════════════════════════════════════════
-     v2.8.8 — 자동 반응형 (3D 뷰 컨테이너 크기 변경 감지)
+     v2.8.9 — 자동 반응형 (3D 뷰 컨테이너 크기 변경 감지)
      ════════════════════════════════════════════════════════════════ -->
 <script>
 (function() {
@@ -944,7 +949,7 @@ window.addEventListener('load', () => {
       }
     });
     ro.observe(view);
-    console.log('[v2.8.8] 3D 뷰 ResizeObserver 활성화');
+    console.log('[v2.8.9] 3D 뷰 ResizeObserver 활성화');
     return true;
   }
 
@@ -961,7 +966,7 @@ window.addEventListener('load', () => {
 
 
 <!-- ════════════════════════════════════════════════════════════════
-     v2.8.8 — 포트 연결 상태에 따라 실시간 실행 버튼 자동 활성/비활성
+     v2.8.9 — 포트 연결 상태에 따라 실시간 실행 버튼 자동 활성/비활성
      ════════════════════════════════════════════════════════════════ -->
 <script>
 (function() {
@@ -1147,7 +1152,7 @@ window.addEventListener('load', () => {
   function bindRunButtons() {
     const btnSim = document.getElementById('btnSimStart');
     const btnRun = document.getElementById('btnRunRealtime');
-    // v2.8.8: btnSim 클릭 시 전역 모드 변경 제거 (app.js의 _simulationOnly만 사용)
+    // v2.8.9: btnSim 클릭 시 전역 모드 변경 제거 (app.js의 _simulationOnly만 사용)
 
     if (btnRun && btnRun.dataset.modeBound !== '1') {
       btnRun.dataset.modeBound = '1';
@@ -1229,7 +1234,7 @@ window.addEventListener('load', () => {
       return;
     }
     if (matches(cmd, CMD_VERSION)) {
-      appendToMonitor('CUBELINK Studio v2.8.8', '#3498db');
+      appendToMonitor('CUBELINK Studio v2.8.9', '#3498db');
       return;
     }
 
@@ -1305,7 +1310,7 @@ window.addEventListener('load', () => {
     bindCommandInput();
     patchParseBoardLine();
     updateRunButton();
-    console.log('🔀 v2.8.8 동작 모드 + 명령어 시스템 로드됨 (기본: real)');
+    console.log('🔀 v2.8.9 동작 모드 + 명령어 시스템 로드됨 (기본: real)');
     console.log('💡 강사용: 시리얼 모니터 입력창에 비밀 단어를 입력하면 디지털 트윈 해제');
   }
 
@@ -1318,7 +1323,7 @@ window.addEventListener('load', () => {
 </script>
 
 
-     <!-- PWA: Service Worker 등록 (v2.8.8: 자동 업데이트 감지) -->
+     <!-- PWA: Service Worker 등록 (v2.8.9: 자동 업데이트 감지) -->
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {

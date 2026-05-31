@@ -28,7 +28,7 @@ Blockly.defineBlocksWithJsonArray([
 
   // 📡 센서·아날로그 블록
   {"type":"cubelink_analogread","message0":"아날로그 핀 %1 읽기","args0":[{"type":"field_dropdown","name":"PIN","options":[["A0","A0"],["A1","A1"],["A2","A2"],["A3","A3"],["A4","A4"],["A5","A5"]]}],"output":"Number","colour":"#F39C12"},
-  {"type":"cubelink_ultrasonic","message0":"초음파 거리(cm) Trig %1 Echo %2","args0":[{"type":"field_number","name":"TRIG","value":7},{"type":"field_number","name":"ECHO","value":6}],"output":"Number","colour":"#F39C12"},
+  {"type":"cubelink_ultrasonic","message0":"초음파 거리(cm) Trig %1 Echo %2","args0":[{"type":"field_number","name":"TRIG","value":4},{"type":"field_number","name":"ECHO","value":5}],"output":"Number","colour":"#F39C12"},
   {"type":"cubelink_map_simple","message0":"숫자 %1 을 (%2 ~ %3) → (%4 ~ %5) 로 변환","args0":[{"type":"field_number","name":"VAL","value":512},{"type":"field_number","name":"FL","value":0},{"type":"field_number","name":"FH","value":1023},{"type":"field_number","name":"TL","value":0},{"type":"field_number","name":"TH","value":180}],"output":"Number","colour":"#F39C12"},
   {"type":"cubelink_map","message0":"값 %1 을 (%2 ~ %3) → (%4 ~ %5) 로 변환","args0":[{"type":"input_value","name":"VAL"},{"type":"field_number","name":"FL","value":0},{"type":"field_number","name":"FH","value":1023},{"type":"field_number","name":"TL","value":0},{"type":"field_number","name":"TH","value":180}],"output":"Number","colour":"#F39C12"},
 

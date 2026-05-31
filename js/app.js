@@ -1127,6 +1127,12 @@
      공통 실행 엔진 (실시간 + 시뮬레이션) — 안전장치 포함
      ============================================================ */
   async function runProgram() {
+        // v2.8.9: 이미 실행 중이면 무시 (중복 호출 방지)
+    if (window._runtimeRunning) {
+      window._runtimeRunning = false;
+      appendSerialLog("⏹ 중단 요청");
+      return;
+    }
     const simOnly = window._simulationOnly === true;
     window._simulationOnly = false;
     const port = window._serialPort;
@@ -1156,12 +1162,7 @@
       if (!confirm("로봇이 연결되지 않았습니다. 3D 시뮬레이션만 실행할까요?")) return;
     }
 
-    // 이미 실행 중이면 중단
-    if (window._runtimeRunning) {
-      window._runtimeRunning = false;
-      appendSerialLog("⏹ 중단 요청");
-      return;
-    }
+
     window._runtimeRunning = true;
 
     const writer = useSerial ? port.writable.getWriter() : null;
@@ -1203,8 +1204,13 @@ async function sendServo(pin, angle) {
 
   if (sendReal && writer) {
     try { await writer.write(enc.encode(`S,${pin},${angle}\n`)); }
-    catch(e) { appendSerialLog(`시리얼 전송 오류: ${e.message}`); }
+    catch(e) {
+      appendSerialLog(`🛑 시리얼 끊김 — 실행 중지: ${e.message}`);
+      window._runtimeRunning = false;
+      return;
+    }
   }
+
   if (sendSim && window.Sim) Sim.setServoAngle(pin, angle);
   window.servoAngles[pin] = angle;
   if (window.MissionProgress) MissionProgress.onSimEvent({ type: 'servo', pin: parseInt(pin), angle: parseFloat(angle) });
@@ -1527,7 +1533,7 @@ async function sendServo(pin, angle) {
           await execChain(loopArr);
           const bodyDuration = performance.now() - beforeBody;
 
-            // 안전 2 (v2.8.8): 매 루프 무조건 양보 (브라우저 응답성 보장)
+            // 안전 2 (v2.8.9): 매 루프 무조건 양보 (브라우저 응답성 보장)
           await new Promise(r => setTimeout(r, bodyDuration < 5 ? 10 : 1));
           // 추가: 100회마다 1프레임 양보 (장시간 실행 시 메모리/렌더 안정성)
           if (loopCount % 100 === 0) {
