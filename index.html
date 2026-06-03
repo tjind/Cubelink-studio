@@ -382,6 +382,10 @@ window.setConnectionState = function(state) {
 /* 💎 완전 해제 함수 — 좀비 객체 방지 */
 window.fullCleanup = async function(opts) {
   opts = opts || {};
+  if (window._heartbeatTimer) {            // v2.9.0: 하트비트 정지
+    clearInterval(window._heartbeatTimer);
+    window._heartbeatTimer = null;
+  }
   window._readerRunning = false;
   try { await window._reader?.cancel(); } catch(_){}
   try { window._reader?.releaseLock(); } catch(_){}
@@ -511,6 +515,21 @@ window.startCubelinkReader = async function(port) {
   let buf = '';
   console.log('🎧 CUBELINK 리더 시작');
   setConnectionState('connected');
+    // v2.9.0: 펌웨어 v1.1 자율모드 오인 방지 하트비트 (1초마다 P 전송)
+  if (window._heartbeatTimer) clearInterval(window._heartbeatTimer);
+  window._heartbeatTimer = setInterval(() => {
+    if (!window._serialPort || !window._serialPort.writable) {
+      clearInterval(window._heartbeatTimer); window._heartbeatTimer = null; return;
+    }
+    if (window._runtimeRunning) return;     // 실행 중엔 S/L 명령이 흐르므로 생략
+    try {
+      const w = window._serialPort.writable.getWriter();
+      w.write(new TextEncoder().encode('P\n')).finally(() => {
+        try { w.releaseLock(); } catch(_){}
+      });
+    } catch(_) { /* 다른 곳이 writer 점유 중 — 다음 주기 재시도 */ }
+  }, 1000);
+
 
   try {
     while (window._readerRunning) {
@@ -1205,7 +1224,7 @@ window.addEventListener('load', () => {
 
     if (matches(cmd, SECRET_TWIN)) {
       window.unlockTwinMode();
-      appendToMonitor('✓ 디지털 트윈 모드 해제됨', '#2ecc71');
+      appendToMonitor('✓ 디지털 트윈 모드 활성화됨', '#2ecc71');
       return;
     }
     if (matches(cmd, CMD_REAL)) {
