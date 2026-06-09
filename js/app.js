@@ -1183,6 +1183,7 @@ checkGraduation() {
     const simStatusEl = document.getElementById('simStatus');
     if (simStatusEl) { simStatusEl.textContent = '● 실행 중'; simStatusEl.classList.add('running'); }
 
+
     const setupRoot = workspace.getBlocksByType('arduino_setup_loop')[0];
     if (!setupRoot) {
       appendSerialLog("⚠️ setup/loop 블록이 없습니다");
@@ -1192,7 +1193,8 @@ checkGraduation() {
       if (simStatusEl) { simStatusEl.textContent = '● 대기 중'; simStatusEl.classList.remove('running'); }
       return;
     }
-
+    // v2.9.1: 실행 중 편집 잠금 (시뮬=금색, 실시간=빨강) — setup 확인 후 켬
+    showRunLock(!simOnly);
     const setupChain = setupRoot.getInputTargetBlock('SETUP');
     const loopChain  = setupRoot.getInputTargetBlock('LOOP');
 
@@ -1566,6 +1568,8 @@ async function sendServo(pin, angle) {
             if (btnOther) { btnOther.disabled = false; btnOther.style.opacity = ''; btnOther.style.cursor = ''; }
       try { if (writer) writer.releaseLock(); } catch(_) {}
       if (simStatusEl) { simStatusEl.textContent = '● 대기 중'; simStatusEl.classList.remove('running'); }
+            hideRunLock(); // v2.9.1: 실행 종료 시 잠금 해제
+
       const totalSec = ((performance.now() - startTime) / 1000).toFixed(1);
       appendSerialLog(`📊 총 ${loopCount}회 반복, ${totalSec}초 소요`);
     }
@@ -1688,6 +1692,51 @@ async function sendServo(pin, angle) {
     });
   }
   window.highlightOrphans = highlightOrphans;
+  /* ============================================================
+     v2.9.1 — 실행 중 잠금 오버레이
+     실행 중 왼쪽 미션 패널 + 가운데 워크스페이스 클릭 차단
+     ============================================================ */
+  function showRunLock(isRealtime) {
+    hideRunLock(); // 중복 방지
+    const colorClass = isRealtime ? 'real' : 'sim';
+    const mainMsg = isRealtime
+      ? '▶ 실물 로봇 실행 중입니다.<br>⏹ 정지 후 편집하세요.'
+      : '🎮 시뮬레이션 실행 중입니다.<br>⏹ 정지 후 편집하세요.';
+    const targets = [
+      { el: document.querySelector('.panel-center'), compact: false, msg: mainMsg },
+      { el: document.querySelector('.panel-left'),   compact: true,  msg: '🔒 실행 중' }
+    ];
+    targets.forEach(t => {
+      if (!t.el) return;
+      if (getComputedStyle(t.el).position === 'static') {
+        t.el.dataset.runlockPos = '1';
+        t.el.style.position = 'relative';
+      }
+      const ov = document.createElement('div');
+      ov.className = 'run-lock-overlay ' + colorClass + (t.compact ? ' compact' : '');
+      ov.innerHTML = `<div class="run-lock-msg">${t.msg}</div>`;
+      ov.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (window.showToast) {
+          window.showToast(isRealtime
+            ? '▶ 실물 실행 중 — 정지 후 편집하세요'
+            : '🎮 시뮬 실행 중 — 정지 후 편집하세요', 'warn', 2000);
+        }
+      });
+      t.el.appendChild(ov);
+    });
+  }
+
+  function hideRunLock() {
+    document.querySelectorAll('.run-lock-overlay').forEach(ov => ov.remove());
+    document.querySelectorAll('[data-runlock-pos="1"]').forEach(el => {
+      el.style.position = '';
+      delete el.dataset.runlockPos;
+    });
+  }
+  window.showRunLock = showRunLock;
+  window.hideRunLock = hideRunLock;
+
 
   function appendSerialLog(msg) {
     const sm = document.getElementById('serialMonitor');

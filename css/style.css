@@ -486,3 +486,51 @@ body.graduated #serialMonitorBar.collapsed { height: 36px; }
   transform: none;
   box-shadow: none;
 }
+/* ════════════════════════════════════════════════════════════════
+   v2.9.1 — 실행 중 잠금 오버레이 (편집 충돌 방지)
+   실행 중 왼쪽 미션 패널 + 가운데 워크스페이스를 덮어 클릭 차단.
+   오른쪽 시뮬레이터는 덮지 않음(밝게 유지, 조작 가능).
+   ════════════════════════════════════════════════════════════════ */
+.run-lock-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: not-allowed;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(1px);
+  animation: runLockFadeIn 0.2s ease;
+}
+@keyframes runLockFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.run-lock-overlay .run-lock-msg {
+  text-align: center;
+  font-weight: 700;
+  font-size: 15px;
+  padding: 16px 22px;
+  border-radius: 10px;
+  line-height: 1.5;
+  pointer-events: none;
+}
+
+/* 시뮬레이션 실행 — 금색 */
+.run-lock-overlay.sim .run-lock-msg {
+  color: var(--gold);
+  border: 2px solid var(--gold);
+  background: rgba(20, 18, 10, 0.85);
+  box-shadow: 0 0 24px rgba(212, 175, 55, 0.45);
+}
+/* 실시간(실물) 실행 — 빨강 */
+.run-lock-overlay.real .run-lock-msg {
+  color: #ff8a8a;
+  border: 2px solid #e74c3c;
+  background: rgba(26, 10, 10, 0.85);
+  box-shadow: 0 0 24px rgba(231, 76, 60, 0.5);
+}
+/* 왼쪽 미션 패널 오버레이는 텍스트 없이 막만 (작아서) */
+.run-lock-overlay.compact .run-lock-msg {
+  font-size: 12px;
+  padding: 10px 12px;
+}
