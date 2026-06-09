@@ -1359,6 +1359,17 @@ window.addEventListener('load', () => {
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
+                 // v2.9.2: 새 버전 SW가 제어권을 잡으면 자동 1회 새로고침 (강사 기기 깔끔 유지)
+          // controller가 이미 있을 때(=재방문 강사)만 새로고침 → 학생 첫 접속은 깜빡임 없음
+          if (navigator.serviceWorker.controller) {
+            let _swRefreshing = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+              if (_swRefreshing) return;        // 무한 새로고침 방지 가드 (필수)
+              _swRefreshing = true;
+              window.location.reload();
+            });
+          }
+
           navigator.serviceWorker.register('./sw.js')
             .then((reg) => {
               console.log('[PWA] Service Worker 등록 성공:', reg.scope);
