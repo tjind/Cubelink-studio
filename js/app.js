@@ -1761,3 +1761,29 @@ async function sendServo(pin, angle) {
 
   window.addEventListener('resize', triggerResize);
 })();
+/* ============================================================
+   CUBELINK Studio 대문(스플래시) 페이지 동작 제어
+   ============================================================ */
+function setupIntroPage() {
+  const btnStart = document.getElementById('btn-intro-start');
+  const introPage = document.getElementById('intro-page');
+  
+  if (btnStart && introPage) {
+    btnStart.addEventListener('click', () => {
+      // 대문 페이지에 투명도 애니메이션 클래스 추가
+      introPage.classList.add('fade-out');
+      
+      // 애니메이션(0.4초)이 끝난 후 완전히 화면에서 제외 (뒤쪽 메인화면 조작 방해 금지)
+      setTimeout(() => {
+        introPage.style.display = 'none';
+      }, 400);
+    });
+  }
+}
+
+// 브라우저가 HTML을 모두 읽은 후 안전하게 setupIntroPage를 실행하도록 연결
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', setupIntroPage);
+} else {
+  setupIntroPage();
+}

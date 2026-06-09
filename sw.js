@@ -1,11 +1,11 @@
-/* CUBELINK Studio Service Worker v2.9.0
+﻿/* CUBELINK Studio Service Worker v2.9.1
  * 캐시 전략:
  *   - HTML과 sw.js 자체: Network First (항상 최신 시도, 실패 시 캐시)
  *   - CSS/JS/이미지 등 정적 파일: Cache First (빠른 로딩)
  * 업데이트 시 CACHE_VERSION 값을 올려야 사용자에게 새 버전이 적용됩니다.
  */
 
-const CACHE_VERSION = 'cubelink-v2.9.0';
+const CACHE_VERSION = 'cubelink-v2.9.1';
 
 // 앱 설치 시 미리 받아둘 핵심 파일 목록
 const PRECACHE_URLS = [

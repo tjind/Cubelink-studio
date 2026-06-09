@@ -1,0 +1,36 @@
+2단계: Uno와 Nano 배선
+핀 매핑표
+Uno (ISP)	→	Nano (대상)	신호
+D13	→	D13	SCK (클럭)
+D12	→	D12	MISO (데이터 입력)
+D11	→	D11	MOSI (데이터 출력)
+D10	→	RST	RESET 제어
+5V	→	5V	전원
+GND	→	GND	접지
+🚨 매우 중요: 캐패시터 추가
+Uno의 RESET 핀과 GND 사이에 10µF 캐패시터를 꽂아야 합니다.
+
+3단계: Arduino IDE 설정 변경
+이제 대상 보드(Nano) 에 펌웨어를 굽기 위한 설정으로 변경합니다.
+
+USB는 여전히 Uno에만 꽂혀있는 상태에서:
+
+Cubelink 펌웨어 스케치 열기
+툴 → 보드 → Arduino Nano ← Uno가 아니라 Nano로 변경!
+툴 → 프로세서 → ATmega328P
+툴 → 포트 → Uno가 꽂힌 포트 그대로 (예: COM12)
+툴 → 프로그래머 → **Arduino as ISP** ← 이게 핵심!
+⚠️ "ArduinoISP" 와 "Arduino as ISP" 는 다른 항목입니다. 반드시 "Arduino as ISP" 선택!
+
+Copy설정 요약
+┌──────────────────────────────────┐
+│ 보드:       Arduino Nano         │
+│ 프로세서:   ATmega328P           │
+│ 포트:       COM12 (Uno 포트)     │
+│ 프로그래머: Arduino as ISP   ★   │
+└──────────────────────────────────┘
+4단계: Cubelink 펌웨어 업로드
+⚠️ 일반 업로드 버튼(→) ❌
+✅ 스케치 → 프로그래머를 사용하여 업로드 (Ctrl + Shift + U)
+
+업로드 진행 중 Uno의 LED가 깜빡이면 정상 동작 중입니다.
