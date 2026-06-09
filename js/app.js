@@ -1693,8 +1693,14 @@ async function sendServo(pin, angle) {
     const sm = document.getElementById('serialMonitor');
     if (!sm) return;
     sm.innerText += msg + "\n";
+    // v2.9.1: 로그 폭주 방지 — 500줄 초과 시 오래된 줄 제거 (먹통 방지)
+    const lines = sm.innerText.split('\n');
+    if (lines.length > 500) {
+      sm.innerText = lines.slice(-400).join('\n') + "\n";
+    }
     sm.scrollTop = sm.scrollHeight;
   }
+
   window.appendSerialLog = appendSerialLog;
 
   function triggerResize() {
