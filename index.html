@@ -395,34 +395,41 @@ window.setConnectionState = function(state) {
 /* 💎 완전 해제 함수 — 좀비 객체 방지 */
 window.fullCleanup = async function(opts) {
   opts = opts || {};
-  if (window._heartbeatTimer) {            // v2.9.0: 하트비트 정지
-    clearInterval(window._heartbeatTimer);
-    window._heartbeatTimer = null;
-  }
-  window._readerRunning = false;
-  try { await window._reader?.cancel(); } catch(_){}
-  try { window._reader?.releaseLock(); } catch(_){}
-  window._reader = null;
-  await new Promise(r => setTimeout(r, 50));
-  if (window._serialPort) {
-    try {
-      if (window._disconnectHandler) {
-        try { window._serialPort.removeEventListener('disconnect', window._disconnectHandler); } catch(_){}
-      }
-      await window._serialPort.close();
-      console.log('🔌 port.close() 성공');
-    } catch(e) {
-      console.warn('port.close() 실패 (무시):', e.message);
+  if (window._cleaningUp) return;          // 중복 진입 차단 (disconnect 핸들러 2곳 동시 호출 방지)
+  window._cleaningUp = true;
+  try {
+    if (window._heartbeatTimer) {            // v2.9.0: 하트비트 정지
+      clearInterval(window._heartbeatTimer);
+      window._heartbeatTimer = null;
     }
-  }
-  await new Promise(r => setTimeout(r, 300));
-  window._serialPort = null;
-  window._disconnectHandler = null;
-  if (!opts.silent) {
-    setConnectionState('idle');
-    console.log('✅ 완전 해제 완료');
+    window._readerRunning = false;
+    try { await window._reader?.cancel(); } catch(_){}
+    try { window._reader?.releaseLock(); } catch(_){}
+    window._reader = null;
+    await new Promise(r => setTimeout(r, 50));
+    if (window._serialPort) {
+      try {
+        if (window._disconnectHandler) {
+          try { window._serialPort.removeEventListener('disconnect', window._disconnectHandler); } catch(_){}
+        }
+        await window._serialPort.close();
+        console.log('🔌 port.close() 성공');
+      } catch(e) {
+        console.warn('port.close() 실패 (무시):', e.message);
+      }
+    }
+    await new Promise(r => setTimeout(r, 300));
+    window._serialPort = null;
+    window._disconnectHandler = null;
+    if (!opts.silent) {
+      setConnectionState('idle');
+      console.log('✅ 완전 해제 완료');
+    }
+  } finally {
+    window._cleaningUp = false;            // 어떤 경우든 플래그 해제
   }
 };
+
 window.stopCubelinkReader = window.fullCleanup;
 
 /* 💎 좀비 포트 회피 */
