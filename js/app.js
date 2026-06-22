@@ -440,6 +440,7 @@
       if (this.done.has(m.id)) return;
       this.done.add(m.id);
       localStorage.setItem('cubelink_missions_done', JSON.stringify([...this.done]));
+      this._justCompleted = true;   // 이번 호출이 '방금 완료'임을 표시
       this.refreshUI();
       this.showToast(m);
     },
@@ -495,14 +496,17 @@
 
 checkGraduation() {
   const allDone = this.done.size >= MISSIONS.length;
-  // v2.8.10: 학생이 ▶로 복원한 후엔 다시 졸업 모드로 강제 전환하지 않음
+  const justCompleted = this._justCompleted === true;
+  this._justCompleted = false;   // 일회성 — 읽는 즉시 소비
+  // v2.8.10: 학생이 자유로 복원시 졸업 다시 조업 모드로 강제 전환하지 않음
   const userRestored = window._graduationRestored === true;
   if (allDone && !userRestored) {
     document.body.classList.add('graduated');
-    if (window.showAllMissionsComplete) window.showAllMissionsComplete();
+    if (justCompleted && window.showAllMissionsComplete) window.showAllMissionsComplete();
   } else if (!allDone) {
     document.body.classList.remove('graduated');
   }
+
 
 
       // 시리얼 모니터 위치 동적 이동
