@@ -34,8 +34,6 @@ Blockly.defineBlocksWithJsonArray([
 
   // 🤖 서보 모터 블록 (기존)
   {"type":"cubelink_servo_attach","message0":"서보 핀 %1 연결","args0":[{"type":"field_dropdown","name":"PIN","options":[["6","6"],["9","9"],["10","10"],["11","11"]]}],"previousStatement":null,"nextStatement":null,"colour":"#3498DB"},
-  {"type":"cubelink_servo_move_simple","message0":"서보 핀 %1 을 %2 도로 회전","args0":[{"type":"field_dropdown","name":"PIN","options":[["6","6"],["9","9"],["10","10"],["11","11"]]},{"type":"field_number","name":"ANGLE","value":90}],"previousStatement":null,"nextStatement":null,"colour":"#3498DB"},
-  {"type":"cubelink_servo_move","message0":"서보 핀 %1 을 [값] %2 도로 회전","args0":[{"type":"field_dropdown","name":"PIN","options":[["6","6"],["9","9"],["10","10"],["11","11"]]},{"type":"input_value","name":"ANGLE","check":"Number"}],"previousStatement":null,"nextStatement":null,"colour":"#3498DB"},
   {"type":"cubelink_servo_smooth_simple","message0":"서보 핀 %1 을 %2 도로 %3 초 동안 부드럽게","args0":[{"type":"field_dropdown","name":"PIN","options":[["6","6"],["9","9"],["10","10"],["11","11"]]},{"type":"field_number","name":"ANGLE","value":90},{"type":"field_number","name":"SEC","value":1}],"previousStatement":null,"nextStatement":null,"colour":"#3498DB"},
   {"type":"cubelink_servo_smooth","message0":"서보 핀 %1 을 [값] %2 도로 %3 초 동안 부드럽게","args0":[{"type":"field_dropdown","name":"PIN","options":[["6","6"],["9","9"],["10","10"],["11","11"]]},{"type":"input_value","name":"ANGLE","check":"Number"},{"type":"field_number","name":"SEC","value":1}],"previousStatement":null,"nextStatement":null,"colour":"#3498DB"},
   {"type":"cubelink_servo_read","message0":"서보 핀 %1 현재 각도","args0":[{"type":"field_dropdown","name":"PIN","options":[["6","6"],["9","9"],["10","10"],["11","11"]]}],"output":"Number","colour":"#3498DB"},
@@ -157,8 +155,6 @@ function smoothHelper(){
 }
 
 Arduino.forBlock['cubelink_servo_attach'] = b => { const pin = b.getFieldValue('PIN'); ensureServo(pin); return `  myServo${pin}.attach(${pin});\n`; };
-Arduino.forBlock['cubelink_servo_move_simple'] = b => { const pin = b.getFieldValue('PIN'); ensureServo(pin); return `  myServo${pin}.write(${b.getFieldValue('ANGLE')});\n`; };
-Arduino.forBlock['cubelink_servo_move'] = b => { const pin = b.getFieldValue('PIN'); ensureServo(pin); const angle = Arduino.valueToCode(b, 'ANGLE', 0) || '90'; return `  myServo${pin}.write(${angle});\n`; };
 Arduino.forBlock['cubelink_servo_smooth_simple'] = b => { const pin = b.getFieldValue('PIN'); ensureServo(pin); smoothHelper(); return `  moveServoSmooth(myServo${pin}, ${b.getFieldValue('ANGLE')}, ${b.getFieldValue('SEC')});\n`; };
 Arduino.forBlock['cubelink_servo_smooth'] = b => { const pin = b.getFieldValue('PIN'); ensureServo(pin); smoothHelper(); const angle = Arduino.valueToCode(b, 'ANGLE', 0) || '90'; const sec = b.getFieldValue('SEC') || 1; return `  moveServoSmooth(myServo${pin}, ${angle}, ${sec});\n`; };
 Arduino.forBlock['cubelink_servo_read'] = b => { const pin = b.getFieldValue('PIN'); ensureServo(pin); return [`myServo${pin}.read()`, 0]; };

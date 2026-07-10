@@ -97,8 +97,8 @@
       id: 'm3', level: 'basic',
       title: '미션 3: 베이스 좌우 회전',
       desc: 'PIN 6번 베이스 서보를 45도로 돌렸다가 2초 후 135도로 움직여 보세요.',
-      hint: '1) 서보 핀 6을 45도로 회전\n2) 2초(또는 2000ms) 기다리기\n3) 서보 핀 6을 135도로 회전\n💡 사이에 ‘기다리기’ 블록이 있어야 움직임이 보입니다.',
-      verify: (ws, sim, evt, state) => {
+       hint: '1) 서보 핀 6을 45도로 부드럽게 회전\n2) 2초(또는 2000ms) 기다리기\n3) 서보 핀 6을 135도로 부드럽게 회전\n💡 사이에 ‘기다리기’ 블록이 있어야 움직임이 보입니다.',
+     verify: (ws, sim, evt, state) => {
         const allActive = getActiveBlocks(ws).all;
         // PIN 6 서보 이동 블록 2개 이상
         const servo6Blocks = allActive.filter(b =>
@@ -169,9 +169,9 @@
     {
       id: 'm6', level: 'intermediate',
       title: '미션 6: 그리퍼 집게 작동하기',
-      desc: 'PIN 11번 그리퍼 서보를 50도(열기)로 설정 후, 1초 뒤 120도(잡기)로 움직여 보세요.',
-      hint: '1) 서보 핀 11을 50도로 회전 (열기)\n2) 1초 기다리기\n3) 서보 핀 11을 120도로 회전 (잡기)\n⚠ 안전 범위 50~120도를 지키세요. 너무 닫으면 부하가 걸립니다.',
-      verify: (ws, sim, evt, state) => {
+        desc: 'PIN 11번 그리퍼 서보를 120도(열기)로 설정 후, 1초 뒤 50도(잡기)로 움직여 보세요.',
+      hint: '1) 서보 핀 11을 120도로 회전 (열기)\n2) 1초 기다리기\n3) 서보 핀 11을 50도로 회전 (잡기)\n⚠ 안전 범위 50~120도를 지키세요. 너무 닫으면 부하가 걸립니다.',
+    verify: (ws, sim, evt, state) => {
         const allActive = getActiveBlocks(ws).all;
         const servo11Blocks = allActive.filter(b =>
           ['cubelink_servo_move_simple', 'cubelink_servo_move',
@@ -258,8 +258,8 @@
       id: 'm9', level: 'advanced',
       title: '미션 9: 장애물 감지 비상정지',
       desc: '초음파 거리가 15cm 이하로 가까워지면 그리퍼(PIN 11)를 닫는 안전 메커니즘을 만드세요.',
-          hint: '⚠ if문은 반드시 loop 안에! (매 순간 거리 감시)\n\n📍 loop() 안에:\n   • "만약 ~ 이라면" 블록\n   • 조건: 초음파 거리 < 15\n   • 만약 참이면: 서보 핀 11을 120도(잡기)로 회전\n\n💡 시뮬에서 초음파 슬라이더를 15 이하로 낮추면 그리퍼가 닫혀야 합니다.',
-            verify: (ws, sim, evt, state) => {
+         hint: '⚠ if문은 반드시 loop 안에! (매 순간 거리 감시)\n\n📍 loop() 안에:\n   • "만약 ~ 이라면" 블록\n   • 조건: 초음파 거리 < 15\n   • 만약 참이면: 서보 핀 11을 50도(잡기)로 회전\n\n💡 시뮬에서 초음파 슬라이더를 15 이하로 낮추면 그리퍼가 닫혀야 합니다.',
+         verify: (ws, sim, evt, state) => {
         const loop = getActiveBlocks(ws).loop;
         // ★ if + 비교 + 초음파 + PIN 11 서보 — 전부 loop에 있어야 함 (매 순간 감시)
         const hasUSCompareInLoopIf = loop.some(b => {
@@ -565,8 +565,8 @@ checkGraduation() {
       missions: [
         { id: 1, title: "미션 1: 로봇팔 차렷 자세 만들기", desc: "서보 모터 블록들을 활용하여 4개 관절(6, 9, 10, 11)을 모두 안전 각도인 90도로 정렬해 보세요.", hint: "‘서보 모터’ 카테고리에서 ‘서보 핀 X을 90도로 회전’ 블록 4개를 가져와 조립하세요." },
         { id: 2, title: "미션 2: 베이스 좌우 회전하기", desc: "로봇팔의 중심축인 PIN 6번 모터를 45도로 돌렸다가 2초 후 135도로 움직여 보세요.", hint: "회전 블록 사이에 ‘기본 구조’의 ‘X초 기다리기’ 블록을 배치해야 눈으로 움직임을 확인할 수 있습니다." },
-        { id: 3, title: "미션 3: 그리퍼 집게 작동하기", desc: "PIN 11번 그리퍼 서보모터를 50도(열기)로 설정한 후, 1초 뒤 120도(꽉 잡기)로 움직여 물건을 집어 보세요.", hint: "그리퍼가 너무 과하게 닫히면 부하가 걸리니 50도~120도 사이 안전 범위를 준수하세요." }
-      ]
+        { id: 3, title: "미션 3: 그리퍼 집게 작동하기", desc: "PIN 11번 그리퍼 서보모터를 120도(열기)로 설정한 후, 1초 뒤 50도(꽉 잡기)로 움직여 물건을 집어 보세요.", hint: "그리퍼가 너무 과하게 닫히면 부하가 걸리니 50도~120도 사이 안전 범위를 준수하세요." }
+    ]
     },
     {
       level: "intermediate", levelTitle: "🚀 조이스틱 심화 제어",
@@ -1719,7 +1719,21 @@ async function sendServo(pin, angle) {
       const ov = document.createElement('div');
       ov.className = 'run-lock-overlay ' + colorClass + (t.compact ? ' compact' : '');
       ov.innerHTML = `<div class="run-lock-msg">${t.msg}</div>`;
-      ov.addEventListener('click', (e) => {
+           // ▼▼▼ v2.9.4 교체: 시리얼 모니터를 오버레이 위로 끌어올려 항상 보이게 ▼▼▼
+      if (t.compact) {
+        const monitor = document.getElementById('serialMonitorBar');
+        // 시리얼 모니터가 이 패널 안에 있을 때만 (졸업 전 일반 모드)
+        if (monitor && monitor.parentElement === t.el) {
+          // 1) 오버레이 하단을 시리얼 모니터 높이만큼 비움 (클릭 차단 영역에서 제외)
+          ov.style.bottom = monitor.offsetHeight + 'px';
+          // 2) 시리얼 모니터를 오버레이(z-index:5000)보다 위로 올려 확실히 노출
+          monitor.dataset.runlockZ = monitor.style.zIndex || '';
+          monitor.style.position = 'relative';
+          monitor.style.zIndex = '5001';
+        }
+      }
+      // ▲▲▲ 교체 끝 ▲▲▲
+   ov.addEventListener('click', (e) => {
         e.stopPropagation();
         if (window.showToast) {
           window.showToast(isRealtime
@@ -1737,8 +1751,16 @@ async function sendServo(pin, angle) {
       el.style.position = '';
       delete el.dataset.runlockPos;
     });
+    // v2.9.4: 시리얼 모니터 z-index 원상복구
+    const monitor = document.getElementById('serialMonitorBar');
+    if (monitor && monitor.dataset.runlockZ !== undefined) {
+      monitor.style.zIndex = monitor.dataset.runlockZ;
+      monitor.style.position = '';
+      if (!monitor.style.zIndex) monitor.style.removeProperty('z-index');
+      delete monitor.dataset.runlockZ;
+    }
   }
-  window.showRunLock = showRunLock;
+ window.showRunLock = showRunLock;
   window.hideRunLock = hideRunLock;
 
 
