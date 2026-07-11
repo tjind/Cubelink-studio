@@ -105,6 +105,33 @@ Arduino.forBlock['math_change'] = b => {
   window.headerExtras.globals.add(`int ${name} = 0;`);
   return `  ${name} += ${val};\n`;
 };
+// ----- 사용자 정의 함수 번역 로직 -----
+// 반환값 없는 함수 정의
+Arduino.forBlock['procedures_defnoreturn'] = b => {
+  const name = b.getFieldValue('NAME').replace(/[^a-zA-Z0-9_]/g, '_');
+  const branch = Arduino.statementToCode(b, 'STACK') || '';
+  window.headerExtras.helpers.add(`void ${name}() {\n${branch}}`);
+  return '';   // 정의는 setup/loop 본문에 코드를 내지 않음
+};
+// 반환값 있는 함수 정의
+Arduino.forBlock['procedures_defreturn'] = b => {
+  const name = b.getFieldValue('NAME').replace(/[^a-zA-Z0-9_]/g, '_');
+  const branch = Arduino.statementToCode(b, 'STACK') || '';
+  const ret = Arduino.valueToCode(b, 'RETURN', 0) || '0';
+  window.headerExtras.helpers.add(`int ${name}() {\n${branch}  return ${ret};\n}`);
+  return '';
+};
+// 함수 호출 (반환값 없음)
+Arduino.forBlock['procedures_callnoreturn'] = b => {
+  const name = b.getFieldValue('NAME').replace(/[^a-zA-Z0-9_]/g, '_');
+  return `  ${name}();\n`;
+};
+// 함수 호출 (반환값 있음)
+Arduino.forBlock['procedures_callreturn'] = b => {
+  const name = b.getFieldValue('NAME').replace(/[^a-zA-Z0-9_]/g, '_');
+  return [`${name}()`, 0];
+};
+
 
 // ----- 통신 & 입출력 번역 로직 -----
 Arduino.forBlock['cubelink_serial_begin'] = b => `  Serial.begin(${b.getFieldValue('BAUD')});\n`;

@@ -1,0 +1,1825 @@
+﻿/**
+ * CUBELINK Studio v2.7.2 - 硫붿씤 ?좏뵆由ъ??댁뀡 ?쒖뼱 濡쒖쭅
+ * ?듭떖 媛쒖꽑 (v2.7.1 ??v2.7.2):
+ *  - blocks.js ?ㅼ젣 ?꾨뱶紐낆뿉 留욎떠 evalValue ?꾨㈃ 蹂댁젙
+ *    쨌 cubelink_joystick_read: NAME/PROP (媛?'?쇱そ'/'?ㅻⅨ履?, 'X'/'Y'/'BTN')
+ *    쨌 cubelink_v2_joystick_x/y/btn: JNAME ?꾨뱶 ?몄떇
+ *    쨌 cubelink_map: VAL ?낅젰 + FL/FH/TL/TH ?꾨뱶
+ *    쨌 cubelink_map_simple: VAL/FL/FH/TL/TH 紐⑤몢 ?꾨뱶
+ *    쨌 cubelink_analogread: A0~A3 ??議곗씠?ㅽ떛 raw 媛??먮룞 留ㅽ븨
+ *    쨌 cubelink_digitalread: PIN 2/7 ??議곗씠?ㅽ떛 SW ?먮룞 留ㅽ븨 (INPUT_PULLUP 諛섏쟾)
+ *    쨌 cubelink_ultrasonic: window._ultrasonicValue ?대갚
+ *  - runProgram???좉퇋 釉붾줉 泥섎━ 異붽?
+ *    쨌 cubelink_v2_joystick_init / cubelink_v2_if / cubelink_v2_if_else
+ *    쨌 cubelink_serial_begin / cubelink_v2_serial_begin
+ *    쨌 cubelink_serial_println_text/num/value
+ *    쨌 cubelink_pinmode (?쒕??덉씠?섏뿉?쒕뒗 濡쒓렇留?
+ *  - 湲곗〈 ?덉쟾?μ튂(MAX_TOTAL_LOOPS, safeAngle, yield) 洹몃?濡??좎?
+ *  - updateJoystickUI ?먮룞 ?섑븨 ?좎?
+ *  - arduino_setup_loop ?붾? 肄붾뱶 ?앹꽦湲??좎?
+ */
+(function() {
+  'use strict';
+
+/* ?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧
+   ?묅뼇??v2.8.0 ??誘몄뀡 寃利??쒖뒪???듯빀 (v2.6.5 ?먯궛 ?댁떇) ?묅뼇??
+   ?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧 */
+
+  /* ????????????????????????????????????????????????????????????????
+     [1] 誘몄뀡 9媛???3洹몃９ (湲곗큹/以묎툒/怨좉툒)
+     媛?誘몄뀡? verify(ws, sim, evt, state) ?⑥닔濡?寃利?
+     - ws: Blockly workspace
+     - sim: ?쒕??덉씠??媛앹껜 (?꾩옱???ъ슜 ???? ?명솚?깆슜)
+     - evt: ?쒕? ?대깽??{type:'led'/'servo'/'serial'/'joystick', ...}
+     - state: ?꾩쟻 ?곹깭 媛앹껜 (誘몄뀡蹂꾨줈 ?낅┰)
+     ???????????????????????????????????????????????????????????????? */
+  const MISSIONS = [
+    // ????? ?윟 湲곗큹怨쇱젙 ?????
+    {
+      id: 'm1', level: 'basic',
+      title: '誘몄뀡 1: LED 耳쒓린',
+      desc: '13踰?LED瑜?怨꾩냽 耳쒖꽭??',
+          hint: '???쒖? ?꾨몢?대끂 ?⑦꽩??吏?ㅼ꽭??\n\n?뱧 setup() ?덉뿉: pinMode(13, OUTPUT) ??珥덇린 ?ㅼ젙\n?뱧 loop() ?덉뿉: digitalWrite(13, HIGH) ??諛섎났 ?숈옉\n\n?뮕 ?쒕??덉씠?곗뿉?????쒖옉 踰꾪듉???뚮윭 ?숈옉???뺤씤?섏꽭??',
+     verify: (ws, sim, evt, state) => {
+        const setup = getActiveBlocks(ws).setup;
+        const loop  = getActiveBlocks(ws).loop;
+        // ??pinMode??setup???덉뼱????
+        const hasPinModeInSetup = setup.some(b =>
+          b.type === 'cubelink_pinmode' &&
+          parseInt(b.getFieldValue('PIN')) === 13 &&
+          b.getFieldValue('MODE') === 'OUTPUT');
+        // ??digitalWrite HIGH??loop???덉뼱????
+        const hasWriteInLoop = loop.some(b =>
+          b.type === 'cubelink_digitalwrite' &&
+          parseInt(b.getFieldValue('PIN')) === 13 &&
+          b.getFieldValue('VAL') === 'HIGH');
+        if (!hasPinModeInSetup || !hasWriteInLoop) return false;
+        return evt.type === 'led' && evt.pin === 13 && evt.on === true;
+      }
+
+    },
+    {
+      id: 'm2', level: 'basic',
+      title: '誘몄뀡 2: LED 源쒕묀?닿린',
+      desc: '0.5珥?媛꾧꺽?쇰줈 13踰?LED瑜?源쒕묀?댁꽭??',
+          hint: '???쒖? ?꾨몢?대끂 ?⑦꽩??吏?ㅼ꽭??\n\n?뱧 setup() ?덉뿉: pinMode(13, OUTPUT)\n?뱧 loop() ?덉뿉: HIGH ??delay(500) ??LOW ??delay(500)\n\n?뮕 源쒕묀?꾩? 諛섎났 ?숈옉?대?濡?loop???ㅼ뼱媛???⑸땲??',
+      verify: (ws, sim, evt, state) => {
+        const setup = getActiveBlocks(ws).setup;
+        const loop  = getActiveBlocks(ws).loop;
+        // ??pinMode??setup???덉뼱????
+        const hasPinModeInSetup = setup.some(b =>
+          b.type === 'cubelink_pinmode' &&
+          parseInt(b.getFieldValue('PIN')) === 13 &&
+          b.getFieldValue('MODE') === 'OUTPUT');
+        if (!hasPinModeInSetup) return false;
+        // ??HIGH/LOW + delay??loop???덉뼱????(源쒕묀?꾩? 諛섎났 ?숈옉)
+        const writesInLoop = loop.filter(b => b.type === 'cubelink_digitalwrite');
+        const hasHighInLoop = writesInLoop.some(b => b.getFieldValue('VAL') === 'HIGH');
+        const hasLowInLoop  = writesInLoop.some(b => b.getFieldValue('VAL') === 'LOW');
+        const hasDelayInLoop = loop.some(b =>
+          ['cubelink_delay', 'cubelink_delay_sec', 'cubelink_v2_delay_ms'].includes(b.type));
+        if (!hasHighInLoop || !hasLowInLoop || !hasDelayInLoop) return false;
+        // ?숈쟻: LED ?좉? 4???꾩쟻
+        if (evt.type === 'led' && evt.pin === 13) {
+          if (state.last === undefined) state.last = null;
+          if (state.last !== evt.on) {
+            state.toggles = (state.toggles || 0) + 1;
+            state.last = evt.on;
+          }
+          if (state.toggles >= 4) return true;
+        }
+        return false;
+      }
+
+
+    },
+    {
+      id: 'm3', level: 'basic',
+      title: '誘몄뀡 3: 踰좎씠??醫뚯슦 ?뚯쟾',
+      desc: 'PIN 6踰?踰좎씠???쒕낫瑜?45?꾨줈 ?뚮졇?ㅺ? 2珥???135?꾨줈 ?吏곸뿬 蹂댁꽭??',
+       hint: '1) ?쒕낫 ? 6??45?꾨줈 遺?쒕읇寃??뚯쟾\n2) 2珥??먮뒗 2000ms) 湲곕떎由ш린\n3) ?쒕낫 ? 6??135?꾨줈 遺?쒕읇寃??뚯쟾\n?뮕 ?ъ씠???섍린?ㅻ━湲겸?釉붾줉???덉뼱???吏곸엫??蹂댁엯?덈떎.',
+     verify: (ws, sim, evt, state) => {
+        const allActive = getActiveBlocks(ws).all;
+        // PIN 6 ?쒕낫 ?대룞 釉붾줉 2媛??댁긽
+        const servo6Blocks = allActive.filter(b =>
+          ['cubelink_servo_move_simple', 'cubelink_servo_move',
+           'cubelink_servo_smooth_simple', 'cubelink_servo_smooth',
+           'cubelink_v2_servo_set', 'cubelink_v2_servo_set_value'].includes(b.type)
+          && String(b.getFieldValue('PIN')) === '6'
+        );
+        if (servo6Blocks.length < 2) return false;
+        // ?대뵒??delay 議댁옱
+        const hasDelay = allActive.some(b =>
+          ['cubelink_delay', 'cubelink_delay_sec', 'cubelink_v2_delay_ms'].includes(b.type));
+        if (!hasDelay) return false;
+        // ?숈쟻: PIN 6 ?쒕낫 媛곷룄 2媛吏 ?댁긽 諛쒖깮
+        if (evt.type === 'servo' && parseInt(evt.pin) === 6) {
+          state.angles = state.angles || new Set();
+          state.angles.add(parseInt(evt.angle));
+          if (state.angles.size >= 2) return true;
+        }
+        return false;
+      }
+    },
+
+    // ????? ?윞 以묎툒怨쇱젙 ?????
+    {
+      id: 'm4', level: 'intermediate',
+      title: '誘몄뀡 4: ?쒕━??異쒕젰 3??,
+      desc: '?쒕━??紐⑤땲?곗뿉 臾댁뾿?대뱺 3踰??댁긽 異쒕젰?섏꽭??',
+      hint: '??媛??癒쇱? ?쒖떆由ъ뼹 ?듭떊 ?쒖옉??釉붾줉??setup???볦븘???댁슂!\n洹몃떎??loop???쒕━??異쒕젰 釉붾줉???ъ슜?섏꽭??',
+      verify: (ws, sim, evt, state) => {
+        const setupBlocks = getActiveBlocks(ws).setup;
+        const hasBegin = setupBlocks.some(b =>
+          b.type === 'cubelink_serial_begin' || b.type === 'cubelink_v2_serial_begin');
+        const hasPrint = getActiveBlocks(ws).all.some(b =>
+          ['cubelink_serial_println_text','cubelink_serial_println_num','cubelink_serial_println_value'].includes(b.type));
+        if (!hasBegin || !hasPrint) return false;
+        if (evt.type === 'serial') {
+          state.count = (state.count || 0) + 1;
+          if (state.count >= 3) return true;
+        }
+        return false;
+      }
+    },
+    {
+      id: 'm5', level: 'intermediate',
+      title: '誘몄뀡 5: ?쒕━??移댁슫??蹂??,
+      desc: '蹂?섎? 1???섎젮媛硫??쒕━?쇰줈 5踰?異쒕젰?섏꽭??',
+      hint: '1) 蹂??硫붾돱?먯꽌 蹂???? count)瑜?留뚮뱶?몄슂\n2) setup?먯꽌 ?쒖떆由ъ뼹 ?듭떊 ?쒖옉??n3) loop?먯꽌 count = count + 1 ???쒕━?쇱뿉 媛?異쒕젰 ???좎떆 湲곕떎由ш린\n?뮕 蹂?섏? 諛섎났??湲곕낯湲곕? ?듯엳???④퀎?낅땲??',
+      verify: (ws, sim, evt, state) => {
+        const all = getActiveBlocks(ws).all;
+        const hasBegin = getActiveBlocks(ws).setup.some(b =>
+          b.type === 'cubelink_serial_begin' || b.type === 'cubelink_v2_serial_begin');
+        const hasVarSet = all.some(b => b.type === 'variables_set');
+        const hasChange = all.some(b => b.type === 'math_change' || b.type === 'variables_set');
+        const hasPrintVar = all.some(b => {
+          if (b.type !== 'cubelink_serial_println_value') return false;
+          const val = b.getInputTargetBlock('VAL');
+          return val && containsBlockType(val, 'variables_get');
+        });
+        if (!hasBegin || !hasVarSet || !hasChange || !hasPrintVar) return false;
+        if (evt.type === 'serial') {
+          state.count = (state.count || 0) + 1;
+          if (state.count >= 5) return true;
+        }
+        return false;
+      }
+    },
+    {
+      id: 'm6', level: 'intermediate',
+      title: '誘몄뀡 6: 洹몃━??吏묎쾶 ?묐룞?섍린',
+        desc: 'PIN 11踰?洹몃━???쒕낫瑜?120???닿린)濡??ㅼ젙 ?? 1珥???50???↔린)濡??吏곸뿬 蹂댁꽭??',
+      hint: '1) ?쒕낫 ? 11??120?꾨줈 ?뚯쟾 (?닿린)\n2) 1珥?湲곕떎由ш린\n3) ?쒕낫 ? 11??50?꾨줈 ?뚯쟾 (?↔린)\n???덉쟾 踰붿쐞 50~120?꾨? 吏?ㅼ꽭?? ?덈Т ?レ쑝硫?遺?섍? 嫄몃┰?덈떎.',
+    verify: (ws, sim, evt, state) => {
+        const allActive = getActiveBlocks(ws).all;
+        const servo11Blocks = allActive.filter(b =>
+          ['cubelink_servo_move_simple', 'cubelink_servo_move',
+           'cubelink_servo_smooth_simple', 'cubelink_servo_smooth',
+           'cubelink_v2_servo_set', 'cubelink_v2_servo_set_value'].includes(b.type)
+          && String(b.getFieldValue('PIN')) === '11'
+        );
+        if (servo11Blocks.length < 2) return false;
+        const hasDelay = allActive.some(b =>
+          ['cubelink_delay', 'cubelink_delay_sec', 'cubelink_v2_delay_ms'].includes(b.type));
+        if (!hasDelay) return false;
+        // ?숈쟻: PIN 11 ?쒕낫 媛곷룄 2媛吏 ?댁긽 諛쒖깮 (????50~120 踰붿쐞 沅뚯옣)
+        if (evt.type === 'servo' && parseInt(evt.pin) === 11) {
+          state.angles = state.angles || new Set();
+          state.angles.add(parseInt(evt.angle));
+          if (state.angles.size >= 2) return true;
+        }
+        return false;
+      }
+    },
+
+    // ????? ?뵶 怨좉툒怨쇱젙 ?????
+    {
+      id: 'm7', level: 'advanced',
+      title: '誘몄뀡 7: 珥덉쓬??嫄곕━ 痢≪젙',
+      desc: '珥덉쓬???쇱꽌(Trig D4 / Echo D5)濡?嫄곕━瑜?痢≪젙???쒕━??紐⑤땲?곗뿉 異쒕젰?섏꽭??',
+      hint: '???쒕━???듭떊 ?쒖옉 釉붾줉??setup??癒쇱? ????댁슂!\n珥덉쓬??釉붾줉???쒖떆由ъ뼹??媛?異쒕젰??釉붾줉??媛??щ’???쇱썙?ｌ쑝?몄슂.',
+      verify: (ws, sim, evt, state) => {
+        const hasBegin = getActiveBlocks(ws).setup.some(b =>
+          b.type === 'cubelink_serial_begin' || b.type === 'cubelink_v2_serial_begin');
+        const hasUSinSerial = getActiveBlocks(ws).all.some(b => {
+          if (b.type !== 'cubelink_serial_println_value') return false;
+          const val = b.getInputTargetBlock('VAL');
+          return val && containsBlockType(val, 'cubelink_ultrasonic');
+        });
+        if (!hasBegin || !hasUSinSerial) return false;
+        if (evt.type === 'serial') {
+          state.count = (state.count || 0) + 1;
+          if (state.count >= 1) return true;
+        }
+        return false;
+      }
+    },
+    {
+      id: 'm8', level: 'advanced',
+      title: '誘몄뀡 8: 議곗씠?ㅽ떛?쇰줈 踰좎씠??議곗쥌',
+      desc: '議곗씠?ㅽ떛??X異?媛?0~1023)???쒕낫 媛곷룄(0~180)濡?map 蹂?섑븯??PIN 6 踰좎씠?ㅻ? 議곗쥌?섏꽭??',
+          hint: '???쒖? ?꾨몢?대끂 ?⑦꽩??吏?ㅼ꽭?? map 釉붾줉? ?꾩닔!\n\n?뱧 setup() ?덉뿉:\n   ??"議곗씠?ㅽ떛 ?쒖옉" 釉붾줉 (諛⑺뼢:?쇱そ, VRx:A0, VRy:A1, SW:2)\n\n?뱧 loop() ?덉뿉:\n   ??"?쒕낫 ? 6??[媛? ?꾨줈 ?뚯쟾"\n   ??媛??щ’??"媛?蹂??map)" 釉붾줉 ?쇱슦湲?(0~1023 ??0~180)\n   ??map??媛??щ’??"?쇱そ 議곗씠?ㅽ떛??X異?媛? ?곌껐\n\n?뮕 留??쒓컙 議곗씠?ㅽ떛???쎌뼱???섎?濡?諛섎뱶??loop??',
+     verify: (ws, sim, evt, state) => {
+        const setup = getActiveBlocks(ws).setup;
+        const loop  = getActiveBlocks(ws).loop;
+        // ??議곗씠?ㅽ떛 珥덇린?붾뒗 setup???덉뼱????
+        const hasJoyInitInSetup = setup.some(b =>
+          b.type === 'cubelink_joystick_init' || b.type === 'cubelink_v2_joystick_init');
+        if (!hasJoyInitInSetup) return false;
+        // ??PIN 6 ?쒕낫 + map + 議곗씠?ㅽ떛 ?쎄린 議고빀? loop???덉뼱????(諛섎났 議곗옉)
+        const hasJoyDrivenServoInLoop = loop.some(b => {
+          const isServoMove = ['cubelink_servo_move', 'cubelink_servo_smooth', 'cubelink_v2_servo_set_value'].includes(b.type);
+          if (!isServoMove) return false;
+          if (String(b.getFieldValue('PIN')) !== '6') return false;
+          const angle = b.getInputTargetBlock('ANGLE');
+          if (!angle) return false;
+          const hasMap = containsBlockType(angle, 'cubelink_map')
+                      || containsBlockType(angle, 'cubelink_map_simple');
+          if (!hasMap) return false;
+          const hasJoyRead = containsBlockType(angle, 'cubelink_joystick_read')
+                          || containsBlockType(angle, 'cubelink_v2_joystick_x')
+                          || containsBlockType(angle, 'cubelink_v2_joystick_y')
+                          || containsBlockType(angle, 'cubelink_analogread');
+          return hasJoyRead;
+        });
+        if (!hasJoyDrivenServoInLoop) return false;
+        // ?숈쟻: PIN 6 ?쒕낫 媛곷룄 3媛吏 ?댁긽 諛쒖깮
+        if (evt.type === 'servo' && parseInt(evt.pin) === 6) {
+          state.angles = state.angles || new Set();
+          state.angles.add(parseInt(evt.angle));
+          if (state.angles.size >= 3) return true;
+        }
+        return false;
+      }
+
+    },
+    {
+      id: 'm9', level: 'advanced',
+      title: '誘몄뀡 9: ?μ븷臾?媛먯? 鍮꾩긽?뺤?',
+      desc: '珥덉쓬??嫄곕━媛 15cm ?댄븯濡?媛源뚯썙吏硫?洹몃━??PIN 11)瑜??ル뒗 ?덉쟾 硫붿빱?덉쬁??留뚮뱶?몄슂.',
+         hint: '??if臾몄? 諛섎뱶??loop ?덉뿉! (留??쒓컙 嫄곕━ 媛먯떆)\n\n?뱧 loop() ?덉뿉:\n   ??"留뚯빟 ~ ?대씪硫? 釉붾줉\n   ??議곌굔: 珥덉쓬??嫄곕━ < 15\n   ??留뚯빟 李몄씠硫? ?쒕낫 ? 11??50???↔린)濡??뚯쟾\n\n?뮕 ?쒕??먯꽌 珥덉쓬???щ씪?대뜑瑜?15 ?댄븯濡???텛硫?洹몃━?쇨? ?ロ????⑸땲??',
+         verify: (ws, sim, evt, state) => {
+        const loop = getActiveBlocks(ws).loop;
+        // ??if + 鍮꾧탳 + 珥덉쓬??+ PIN 11 ?쒕낫 ???꾨? loop???덉뼱????(留??쒓컙 媛먯떆)
+        const hasUSCompareInLoopIf = loop.some(b => {
+          if (!['controls_if','controls_ifelse','cubelink_v2_if','cubelink_v2_if_else'].includes(b.type)) return false;
+          const cond = b.getInputTargetBlock('IF0') || b.getInputTargetBlock('COND');
+          if (!cond) return false;
+          return containsBlockType(cond, 'cubelink_ultrasonic')
+              && (cond.type === 'logic_compare' || containsBlockType(cond, 'logic_compare'));
+        });
+        const hasGripCloseInLoopIf = loop.some(b => {
+          if (!['controls_if','controls_ifelse','cubelink_v2_if','cubelink_v2_if_else'].includes(b.type)) return false;
+          const doBlock = b.getInputTargetBlock('DO0') || b.getInputTargetBlock('DO');
+          if (!doBlock) return false;
+          let cur = doBlock;
+          while (cur) {
+            const isServo = ['cubelink_servo_move_simple','cubelink_servo_move',
+                             'cubelink_servo_smooth_simple','cubelink_servo_smooth',
+                             'cubelink_v2_servo_set','cubelink_v2_servo_set_value'].includes(cur.type);
+            if (isServo && String(cur.getFieldValue('PIN')) === '11') return true;
+            cur = cur.getNextBlock();
+          }
+          return false;
+        });
+        if (!hasUSCompareInLoopIf || !hasGripCloseInLoopIf) return false;
+        // ?숈쟻: 珥덉쓬????15cm ?곹깭?먯꽌 PIN 11 ?쒕낫 ?대깽??諛쒖깮
+        if (evt.type === 'servo' && parseInt(evt.pin) === 11) {
+          const us = window._ultrasonicValue != null ? window._ultrasonicValue : 30;
+          if (us <= 15) state.triggered = true;
+          if (state.triggered) return true;
+        }
+        return false;
+      }
+
+    }
+  ];
+  window.MISSIONS = MISSIONS; // ?붾쾭洹몄슜
+
+  /* ????????????????????????????????????????????????????????????????
+     [2] 寃利??ы띁 3醫?
+         setup/loop???ㅼ젣 ?곌껐??釉붾줉留?異붿텧 + ?꾨뱶/以묒꺽 寃??
+     ???????????????????????????????????????????????????????????????? */
+  function getActiveBlocks(ws) {
+    if (!ws) return { setup: [], loop: [], all: [] };
+    const top = ws.getTopBlocks(true).find(b => b.type === 'arduino_setup_loop');
+    if (!top) return { setup: [], loop: [], all: [] };
+
+    const collect = (block, arr) => {
+      while (block) {
+        arr.push(block);
+        block.inputList.forEach(inp => {
+          if (inp.connection && inp.connection.targetBlock()) {
+            collect(inp.connection.targetBlock(), arr);
+          }
+        });
+        block = block.getNextBlock();
+      }
+    };
+
+    const setupArr = [];
+    const loopArr  = [];
+    collect(top.getInputTargetBlock('SETUP'), setupArr);
+    collect(top.getInputTargetBlock('LOOP'),  loopArr);
+
+    return {
+      setup: setupArr,
+      loop:  loopArr,
+      all:   [...setupArr, ...loopArr]
+    };
+  }
+
+  function hasActiveBlock(ws, type, fieldCheck) {
+    const { all } = getActiveBlocks(ws);
+    return all.some(b => {
+      if (b.type !== type) return false;
+      if (fieldCheck) return fieldCheck(b);
+      return true;
+    });
+  }
+
+  function containsBlockType(block, type) {
+    if (!block) return false;
+    if (block.type === type) return true;
+    for (const inp of block.inputList) {
+      if (inp.connection && inp.connection.targetBlock()) {
+        if (containsBlockType(inp.connection.targetBlock(), type)) return true;
+      }
+    }
+    return false;
+  }
+
+  window.getActiveBlocks   = getActiveBlocks;
+  window.hasActiveBlock    = hasActiveBlock;
+  window.containsBlockType = containsBlockType;
+
+  /* ????????????????????????????????????????????????????????????????
+     [3] WorkspaceStorage ??誘몄뀡蹂??묒뾽臾??먮룞 ???蹂듭썝
+         localStorage ?? cubelink_ws_<missionId>
+     ???????????????????????????????????????????????????????????????? */
+  const WorkspaceStorage = {
+    KEY_PREFIX: 'cubelink_ws_',
+    saveTimer: null,
+
+    scheduleSave(missionId) {
+      if (!missionId) return;
+      clearTimeout(this.saveTimer);
+      this.saveTimer = setTimeout(() => this.save(missionId), 500);
+    },
+
+    save(missionId) {
+      if (!missionId || !window.workspace) return;
+      try {
+        const xml = Blockly.Xml.workspaceToDom(window.workspace);
+        const xmlText = Blockly.Xml.domToText(xml);
+        localStorage.setItem(this.KEY_PREFIX + missionId, xmlText);
+      } catch (e) {
+        console.warn('WorkspaceStorage.save ?ㅽ뙣:', e);
+      }
+    },
+
+    restore(missionId) {
+      if (!missionId || !window.workspace) return false;
+      try {
+        const xmlText = localStorage.getItem(this.KEY_PREFIX + missionId);
+        if (!xmlText) return false;
+        window.workspace.clear();
+        Blockly.Xml.domToWorkspace(Blockly.utils.xml.textToDom(xmlText), window.workspace);
+        console.log('?뱛 ?묒뾽臾?蹂듭썝:', missionId);
+        return true;
+      } catch (e) {
+        console.warn('WorkspaceStorage.restore ?ㅽ뙣:', e);
+        return false;
+      }
+    },
+
+    clear(missionId) {
+      if (!missionId) return;
+      localStorage.removeItem(this.KEY_PREFIX + missionId);
+    },
+
+    clearAll() {
+      Object.keys(localStorage)
+        .filter(k => k.startsWith(this.KEY_PREFIX))
+        .forEach(k => localStorage.removeItem(k));
+    }
+  };
+  window.WorkspaceStorage = WorkspaceStorage;
+
+  /* ????????????????????????????????????????????????????????????????
+     [4] MissionProgress ??吏꾪뻾 ?곹깭 愿由?+ ?쒕? ?대깽???섏떊 + 議몄뾽 紐⑤뱶
+     ???????????????????????????????????????????????????????????????? */
+  const MissionProgress = {
+    done: new Set(JSON.parse(localStorage.getItem('cubelink_missions_done') || '[]')),
+    current: null,
+    state: {},
+
+    select(id) {
+      this.current = id;
+      this.state = {};
+    },
+
+    onSimEvent(evt) {
+      if (!this.current) return;
+      const m = MISSIONS.find(x => x.id === this.current);
+      if (!m || this.done.has(m.id)) return;
+      try {
+        if (m.verify(window.workspace, window.Sim, evt, this.state, 'sim')) {
+          this.markDone(m);
+        }
+      } catch (e) {
+        console.warn('verify err:', m.id, e);
+      }
+    },
+
+    // (援? ?⑦꽩 留ㅼ묶? ?쒕? ?대깽??湲곕컲?쇰줈 ?듭씪 ??no-op
+    checkPattern() { /* no-op */ },
+
+    markDone(m) {
+      if (this.done.has(m.id)) return;
+      this.done.add(m.id);
+      localStorage.setItem('cubelink_missions_done', JSON.stringify([...this.done]));
+      this._justCompleted = true;   // ?대쾲 ?몄텧??'諛⑷툑 ?꾨즺'?꾩쓣 ?쒖떆
+      this.refreshUI();
+      this.showToast(m);
+    },
+
+    refreshUI() {
+      // 誘몄뀡 ?꾩씠???곹깭 媛깆떊
+      document.querySelectorAll('.mission-item').forEach(el => {
+        const id = el.dataset.mid;
+        if (!id) return;
+        el.classList.toggle('done', this.done.has(id));
+        const numEl = el.querySelector('.mission-num');
+        if (!numEl) return;
+        const idx = MISSIONS.findIndex(x => x.id === id);
+        if (this.done.has(id)) {
+          numEl.textContent = '??;
+          numEl.classList.remove('in-progress');
+        } else if (id === this.current) {
+          numEl.textContent = idx + 1;
+          numEl.classList.add('in-progress');
+        } else {
+          numEl.textContent = idx + 1;
+          numEl.classList.remove('in-progress');
+        }
+      });
+
+      // ?꾩껜 吏꾪뻾 諛곗?
+      const pb = document.getElementById('progressBadge');
+      if (pb) pb.textContent = `吏꾪뻾瑜? ${this.done.size} / ${MISSIONS.length}`;
+
+      // 洹몃９蹂?吏꾪뻾 諛곗?
+      ['basic', 'intermediate', 'advanced'].forEach(level => {
+        const items = MISSIONS.filter(m => m.level === level);
+        const doneN = items.filter(m => this.done.has(m.id)).length;
+        const badge = document.querySelector(`.mission-group[data-level="${level}"] .group-badge`);
+        if (badge) badge.textContent = `${doneN} / ${items.length}`;
+      });
+
+      this.checkGraduation();
+    },
+
+    showToast(m) {
+      let t = document.getElementById('missionToast');
+      if (!t) {
+        t = document.createElement('div');
+        t.id = 'missionToast';
+        t.className = 'mission-toast';
+        document.body.appendChild(t);
+      }
+      t.innerHTML = `?럦 誘몄뀡 ?꾨즺!<br><span style="font-weight:400;font-size:13px;">${m.title}</span>`;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2800);
+    },
+
+checkGraduation() {
+  const allDone = this.done.size >= MISSIONS.length;
+  const justCompleted = this._justCompleted === true;
+  this._justCompleted = false;   // ?쇳쉶?????쎈뒗 利됱떆 ?뚮퉬
+  // v2.8.10: ?숈깮???먯쑀濡?蹂듭썝??議몄뾽 ?ㅼ떆 議곗뾽 紐⑤뱶濡?媛뺤젣 ?꾪솚?섏? ?딆쓬
+  const userRestored = window._graduationRestored === true;
+  if (allDone && !userRestored) {
+    document.body.classList.add('graduated');
+    if (justCompleted && window.showAllMissionsComplete) window.showAllMissionsComplete();
+  } else if (!allDone) {
+    document.body.classList.remove('graduated');
+  }
+
+
+
+      // ?쒕━??紐⑤땲???꾩튂 ?숈쟻 ?대룞
+      const monitor = document.getElementById('serialMonitorBar');
+      const panelCenter = document.querySelector('.panel-center');
+      const panelLeft = document.querySelector('.panel-left');
+      if (monitor && panelCenter && panelLeft) {
+        if (allDone) {
+          // 議몄뾽 紐⑤뱶: panel-center ?섎떒(紐낅졊??釉붾줉 ?꾨옒)?쇰줈 ?대룞
+          if (monitor.parentElement !== panelCenter) {
+            panelCenter.appendChild(monitor);
+            console.log('?럳 ?쒕━??紐⑤땲????紐낅졊??釉붾줉 ?꾨옒濡??대룞');
+          }
+        } else {
+          // ?쇰컲 紐⑤뱶: panel-left ?섎떒?쇰줈 蹂듦?
+          if (monitor.parentElement !== panelLeft) {
+            panelLeft.appendChild(monitor);
+            console.log('?뱧 ?쒕━??紐⑤땲????誘몄뀡 ?⑤꼸 ?섎떒?쇰줈 蹂듦?');
+          }
+        }
+      }
+
+      // 議몄뾽 紐⑤뱶 吏꾩엯 ??Blockly ?곸뿭 ?ш퀎??+ ?쒕? ??쑝濡??먮룞 ?꾪솚
+      setTimeout(() => {
+        if (window.workspace && typeof Blockly.svgResize === 'function') {
+          Blockly.svgResize(window.workspace);
+        }
+      }, 100);
+      if (allDone) {
+        const hintTab = document.querySelector('.tab[data-tab="hint"]');
+        if (hintTab && hintTab.classList.contains('active')) {
+          const simTab = document.querySelector('.tab[data-tab="sim"]');
+          if (simTab) simTab.click();
+        }
+      }
+    },
+
+
+    reset() {
+      this.done.clear();
+      localStorage.removeItem('cubelink_missions_done');
+      this.refreshUI();
+    }
+  };
+  window.MissionProgress = MissionProgress;
+
+/* ?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧
+   ?묅뼇??v2.8.0 1?④퀎 ?????ㅼ쓬 2?④퀎?먯꽌 ?뚮뜑留??대깽??諛쒗뻾 異붽? ?묅뼇??
+   ?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧 */
+
+
+
+  const CURRICULUM = [
+    {
+      level: "basic", levelTitle: "?뙮 ?④퀎蹂?湲곗큹 ?ㅼ뒿",
+      missions: [
+        { id: 1, title: "誘몄뀡 1: 濡쒕큸??李⑤졆 ?먯꽭 留뚮뱾湲?, desc: "?쒕낫 紐⑦꽣 釉붾줉?ㅼ쓣 ?쒖슜?섏뿬 4媛?愿??6, 9, 10, 11)??紐⑤몢 ?덉쟾 媛곷룄??90?꾨줈 ?뺣젹??蹂댁꽭??", hint: "?섏꽌蹂?紐⑦꽣??移댄뀒怨좊━?먯꽌 ?섏꽌蹂?? X??90?꾨줈 ?뚯쟾??釉붾줉 4媛쒕? 媛?몄? 議곕┰?섏꽭??" },
+        { id: 2, title: "誘몄뀡 2: 踰좎씠??醫뚯슦 ?뚯쟾?섍린", desc: "濡쒕큸?붿쓽 以묒떖異뺤씤 PIN 6踰?紐⑦꽣瑜?45?꾨줈 ?뚮졇?ㅺ? 2珥???135?꾨줈 ?吏곸뿬 蹂댁꽭??", hint: "?뚯쟾 釉붾줉 ?ъ씠???섍린蹂?援ъ“?숈쓽 ?쁙珥?湲곕떎由ш린??釉붾줉??諛곗튂?댁빞 ?덉쑝濡??吏곸엫???뺤씤?????덉뒿?덈떎." },
+        { id: 3, title: "誘몄뀡 3: 洹몃━??吏묎쾶 ?묐룞?섍린", desc: "PIN 11踰?洹몃━???쒕낫紐⑦꽣瑜?120???닿린)濡??ㅼ젙???? 1珥???50??苑??↔린)濡??吏곸뿬 臾쇨굔??吏묒뼱 蹂댁꽭??", hint: "洹몃━?쇨? ?덈Т 怨쇳븯寃??ロ엳硫?遺?섍? 嫄몃━??50??120???ъ씠 ?덉쟾 踰붿쐞瑜?以?섑븯?몄슂." }
+    ]
+    },
+    {
+      level: "intermediate", levelTitle: "?? 議곗씠?ㅽ떛 ?ы솕 ?쒖뼱",
+      missions: [
+        { id: 4, title: "誘몄뀡 4: 議곗씠?ㅽ떛 ?쇱꽌 以鍮?, desc: "?쒕━???듭떊???쒖옉?섍퀬, ?쇱そ 議곗씠?ㅽ떛???꾨궇濡쒓렇 A0, A1 ?怨??ㅼ쐞移?2踰덉뿉 ?곌껐??珥덇린?뷀븯?몄슂.", hint: "?섏“?댁뒪?기?移댄뀒怨좊━?먯꽌 珥덇린??釉붾줉??媛?몄? ?섏쿂????踰?setup()??移몄뿉 ?ｌ뼱???⑸땲??" },
+        { id: 5, title: "誘몄뀡 5: 議곗씠?ㅽ떛 媛?紐⑤땲?곕쭅", desc: "諛섎났 猷⑦봽 ?덉뿉???쇱そ 議곗씠?ㅽ떛??X異?媛믪쓣 ?쎌뼱? ?쒕━??紐⑤땲??李쎌뿉 ?ㅼ떆媛꾩쑝濡?異쒕젰??蹂댁꽭??", hint: "?쒕━???듭떊 ?쒖옉 釉붾줉??setup???ｊ퀬, loop ?덉뿉???섏떆由ъ뼹??媛?異쒕젰??釉붾줉怨?議곗씠?ㅽ떛 ?쎄린 釉붾줉???⑹튂?몄슂." },
+        { id: 6, title: "誘몄뀡 6: 議곗씠?ㅽ떛?쇰줈 踰좎씠??議곗쥌", desc: "議곗씠?ㅽ떛??X異??꾨궇濡쒓렇 媛?0~1023)???쒕낫紐⑦꽣 媛곷룄 踰붿쐞(0~180)濡?map 蹂?섑븯??踰좎씠??6踰?紐⑦꽣瑜?議곗쥌?섏꽭??", hint: "?섏꽱?쑣룹븘?좊줈洹멤?移댄뀒怨좊━???섍컪 蹂??map)??釉붾줉???쒕낫 ?뚯쟾 釉붾줉??媛곷룄 ?먮━?????쇱썙 ?ｌ쑝?몄슂." }
+      ]
+    },
+    {
+      level: "advanced", levelTitle: "?쨼 ?먯쑉二쇳뻾 諛??멸났吏???묒슜",
+      missions: [
+        { id: 7, title: "誘몄뀡 7: 珥덉쓬???덉씠??媛??, desc: "珥덉쓬???쇱꽌(Trig D4 / Echo D5)瑜??쒖꽦?뷀븯???꾨갑??臾쇱껜源뚯???嫄곕━瑜?cm ?⑥쐞濡??뺣??섍쾶 痢≪젙??蹂댁꽭??", hint: "嫄곕━瑜??쎌뼱? 諛붾줈 ?쒕━??紐⑤땲?곗뿉 異쒕젰?섎룄濡?猷⑦봽臾몄쓣 援ъ꽦?섏뿬 ?쇱꽌 ?섏튂 蹂?붾? 愿李고븯?몄슂." },
+        { id: 8, title: "誘몄뀡 8: ?μ븷臾?媛먯? ?먮룞 鍮꾩긽?뺤?", desc: "留뚯빟 珥덉쓬???쇱꽌 嫄곕━媛 15cm ?댄븯濡?醫곹?吏硫?洹몃━??吏묎쾶瑜?利됱떆 耳쒓퀬 踰좎씠?ㅻ? ?뺤??섎뒗 ?덉쟾 留ㅼ빱?덉쬁??留뚮뱶?몄슂.", hint: "?섑쓲由??쒖뼱?숈쓽 ?섎쭔??~ ?대씪硫닳?釉붾줉怨??섏꽱?쑣룹븘?좊줈洹멤숈쓽 鍮꾧탳 ?곗궛??<) 釉붾줉???좉린?곸쑝濡?寃고빀?섏꽭??" },
+        { id: 9, title: "誘몄뀡 9: CUBELINK 怨듭옣 ?먮룞???꾨줈?앺듃", desc: "議곗씠?ㅽ떛?쇰줈 臾쇨굔??吏묒뼱 ?щ┛ ?? 珥덉쓬???쇱꽌???먯쓣 ?硫?吏?뺣맂 ?꾩튂濡??먮룞?쇰줈 臾쇨굔???댁넚?섎뒗 蹂듯빀 留ㅽ겕濡?肄붾뵫???꾩꽦?섏꽭??", hint: "吏湲덇퉴吏 諛곗슫 紐⑤뱺 ?쇱꽌? ?쒕낫 釉붾줉??珥앸룞?먰븯???듯빀 ?쇰━ ?뚮줈瑜??ㅺ퀎?섎뒗 留덉뒪???④퀎?낅땲??" }
+      ]
+    }
+  ];
+
+  let workspace;
+  let currentMissionId = 1;
+  let activeTab = 'hint';
+
+  // ??? ?꾩뿭 ?곗씠????μ냼 ???
+  window.joystickData = window.joystickData || {
+    left:  { x: 500, y: 500, sw: 0 },
+    right: { x: 500, y: 500, sw: 0 }
+  };
+  window.servoAngles = window.servoAngles || { 6: 90, 9: 90, 10: 90, 11: 90 };
+  window._userVars = window._userVars || {};
+  window._ultrasonicValue = window._ultrasonicValue != null ? window._ultrasonicValue : 30;
+
+  /* ============================================================
+     珥덉쓬???щ씪?대뜑 ??window._ultrasonicValue ?먮룞 ?숆린??
+     ============================================================ */
+  function bindUltrasonicSlider() {
+    const slider = document.getElementById('usSlider');
+    if (!slider) { setTimeout(bindUltrasonicSlider, 200); return; }
+    if (slider._bound) return;
+    slider._bound = true;
+    const sync = () => {
+      window._ultrasonicValue = parseFloat(slider.value) || 0;
+      const span = document.getElementById('usValue');
+      if (span) span.textContent = Math.round(window._ultrasonicValue);
+    };
+    slider.addEventListener('input', sync);
+    sync();
+    console.log('??珥덉쓬???щ씪?대뜑 ??_ultrasonicValue ?숆린??);
+  }
+
+  /* ============================================================
+     updateJoystickUI ?먮룞 ?섑븨
+     ???ㅼ젣 議곗씠?ㅽ떛 ?곗씠???쒕━???섏떊)媛 window.joystickData???먮룞 ???
+     ============================================================ */
+  function wrapUpdateJoystickUI() {
+    if (typeof window.updateJoystickUI !== 'function') {
+      setTimeout(wrapUpdateJoystickUI, 50);
+      return;
+    }
+    if (window.updateJoystickUI._wrapped) return;
+
+    const orig = window.updateJoystickUI;
+    window.updateJoystickUI = function(which, x, y, sw) {
+      const result = orig.apply(this, arguments);
+
+      // which ?뺢퇋?? 1/'1'/'left'/'Left'/'L' ??'left',  2/'2'/'right'/'Right'/'R' ??'right'
+      const w = String(which || '').toLowerCase();
+      let key;
+      if (w === '1' || w === 'left'  || w === 'l') key = 'left';
+      else if (w === '2' || w === 'right' || w === 'r') key = 'right';
+      else if (w.includes('left'))  key = 'left';
+      else if (w.includes('right')) key = 'right';
+      else key = 'left';
+
+      if (!window.joystickData[key]) window.joystickData[key] = {};
+      window.joystickData[key].x  = (typeof x === 'number') ? x : parseInt(x, 10) || 500;
+      window.joystickData[key].y  = (typeof y === 'number') ? y : parseInt(y, 10) || 500;
+      window.joystickData[key].sw = sw ? 1 : 0;
+
+      return result;
+    };
+    window.updateJoystickUI._wrapped = true;
+    console.log('??updateJoystickUI ?섑븨 ?꾨즺 ??議곗씠?ㅽ떛 ??joystickData ?먮룞 ?숆린??);
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    if (window.Sim && typeof window.Sim.init === 'function') {
+      window.Sim.init();
+    }
+
+    workspace = Blockly.inject('blocklyDiv', {
+      toolbox: document.getElementById('toolbox'),
+      grid: { spacing: 20, length: 3, colour: '#ccc', gridBySnap: true },
+      trashcan: true,
+      zoom: { controls: true, wheel: true, startScale: 1.0, maxScale: 3, minScale: 0.3, scaleSpeed: 1.2 },
+      resize: true
+    });
+    window.workspace = workspace;
+
+    // ?붾? Arduino 肄붾뱶 ?앹꽦湲???肄섏넄 ?먮윭 ?쒓굅
+    if (window.Arduino) {
+      if (!window.Arduino.forBlock) window.Arduino.forBlock = {};
+      if (!window.Arduino.forBlock['arduino_setup_loop']) {
+        window.Arduino.forBlock['arduino_setup_loop'] = function(block) {
+          const setupCode = window.Arduino.statementToCode(block, 'SETUP') || '';
+          const loopCode  = window.Arduino.statementToCode(block, 'LOOP')  || '';
+          return setupCode + loopCode;
+        };
+      }
+    }
+
+    // ?고겢由?硫붾돱: ?ㅽ깮 ?꾩껜 蹂듭젣
+    if (Blockly.ContextMenuRegistry && Blockly.ContextMenuRegistry.registry) {
+      try {
+        Blockly.ContextMenuRegistry.registry.register({
+          id: 'duplicate_stack',
+          weight: 1.5,
+          scopeType: Blockly.ContextMenuRegistry.ScopeType.BLOCK,
+          displayText: '?뵕 ?ㅽ깮 ?꾩껜 蹂듭젣',
+          preconditionFn: (scope) => (scope.block && !scope.block.isInFlyout) ? 'enabled' : 'hidden',
+          callback: (scope) => {
+            const src = scope.block;
+            const ws = src.workspace;
+            const xml = Blockly.Xml.blockToDom(src, true);
+            const newBlock = Blockly.Xml.domToBlock(xml, ws);
+            const pos = src.getRelativeToSurfaceXY();
+            newBlock.moveBy(pos.x + 30, pos.y + 30);
+          }
+        });
+        console.log('???ㅽ깮 ?꾩껜 蹂듭젣 硫붾돱 ?깅줉');
+      } catch(e) { console.warn('而⑦뀓?ㅽ듃 硫붾돱 ?깅줉 ?ㅽ뙣:', e.message); }
+    }
+
+    workspace.addChangeListener(updateCppCodeView);
+
+    renderMissions();
+    setupTabEvents();
+    setupButtonEvents();
+
+    // workspace 蹂寃??? C++ 肄붾뱶 媛깆떊 + ?먮룞???+ orphan 寃쎄퀬
+    workspace.addChangeListener(() => {
+      try { highlightOrphans(); } catch (e) {}
+      if (MissionProgress.current) {
+        WorkspaceStorage.scheduleSave(MissionProgress.current);
+      }
+    });
+
+    selectMission('m1');
+
+
+    // ?몃? ?섏〈 珥덇린??
+    wrapUpdateJoystickUI();
+    bindUltrasonicSlider();
+
+    setTimeout(triggerResize, 300);
+    setTimeout(() => window.dispatchEvent(new Event('resize')), 600);
+  });
+
+  /* ============================================================
+     而ㅻ━?섎읆 硫붾돱
+     ============================================================ */
+  /* ============================================================
+     誘몄뀡 硫붾돱 ??3洹몃９ ?꾩퐫?붿뼵 ?뚮뜑留?(v2.8.0)
+     ============================================================ */
+  function renderMissions() {
+    const container = document.getElementById('missionList');
+    if (!container) return;
+
+    const groups = {
+      basic:        { title: '?윟 湲곗큹怨쇱젙', items: [] },
+      intermediate: { title: '?윞 以묎툒怨쇱젙', items: [] },
+      advanced:     { title: '?뵶 怨좉툒怨쇱젙', items: [] }
+    };
+    MISSIONS.forEach((m, idx) => {
+      if (groups[m.level]) groups[m.level].items.push({ ...m, index: idx + 1 });
+    });
+
+    // ??λ맂 ?쇱묠/?묓옒 ?곹깭 (湲곕낯: 湲곗큹留??쇱묠)
+    const openState = JSON.parse(
+      localStorage.getItem('cubelink_group_open')
+      || '{"basic":true,"intermediate":false,"advanced":false}'
+    );
+
+    const escapeHTML = (s) => String(s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+    const html = Object.entries(groups).map(([level, g]) => {
+      const doneCount = g.items.filter(m => MissionProgress.done.has(m.id)).length;
+      const collapsedClass = openState[level] ? '' : 'collapsed';
+      const itemsHtml = g.items.map(m => {
+        const shortDesc = m.desc.length > 36 ? m.desc.substring(0, 36) + '...' : m.desc;
+        return `
+          <div class="mission-item" data-mid="${m.id}" id="mItem-${m.id}">
+            <div class="mission-num">${m.index}</div>
+            <div style="flex:1;min-width:0;">
+              <strong>${escapeHTML(m.title)}</strong>
+              <small>${escapeHTML(shortDesc)}</small>
+            </div>
+          </div>`;
+      }).join('');
+      return `
+        <div class="mission-group ${collapsedClass}" data-level="${level}">
+          <div class="mission-group-header" data-level="${level}">
+            <span class="group-title">${g.title}</span>
+            <span style="display:flex;align-items:center;gap:8px;">
+              <span class="group-badge">${doneCount} / ${g.items.length}</span>
+              <span class="toggle-arrow">??/span>
+            </span>
+          </div>
+          <div class="mission-group-body">${itemsHtml}</div>
+        </div>`;
+    }).join('');
+
+    container.innerHTML = html;
+
+    // 洹몃９ ?ㅻ뜑 ?대┃ ???묎린/?쇱튂湲?
+    container.querySelectorAll('.mission-group-header').forEach(h => {
+      h.addEventListener('click', () => {
+        const level = h.getAttribute('data-level');
+        const group = container.querySelector(`.mission-group[data-level="${level}"]`);
+        if (!group) return;
+        group.classList.toggle('collapsed');
+        const state = JSON.parse(localStorage.getItem('cubelink_group_open') || '{}');
+        state[level] = !group.classList.contains('collapsed');
+        localStorage.setItem('cubelink_group_open', JSON.stringify(state));
+      });
+    });
+
+    // 誘몄뀡 ?꾩씠???대┃ ??誘몄뀡 ?좏깮
+    container.querySelectorAll('.mission-item').forEach(el => {
+      el.addEventListener('click', () => {
+        const id = el.dataset.mid;
+        if (id) selectMission(id);
+      });
+    });
+
+    MissionProgress.refreshUI();
+  }
+  window.renderMissions = renderMissions;
+
+   /* ============================================================
+     誘몄뀡 ?좏깮 ???묒뾽臾??먮룞 ???蹂듭썝 (v2.8.0)
+     ============================================================ */
+  function selectMission(id) {
+    // 媛숈? 誘몄뀡 ?ъ꽑?앹? 臾댁떆
+    if (MissionProgress.current === id) return;
+
+    // ?꾩옱 誘몄뀡 ?묒뾽臾????
+    if (MissionProgress.current) {
+      WorkspaceStorage.save(MissionProgress.current);
+    }
+
+    const target = MISSIONS.find(x => x.id === id);
+    if (!target) return;
+    currentMissionId = id;
+
+    // UI 媛깆떊
+    document.querySelectorAll('.mission-item').forEach(el =>
+      el.classList.toggle('active', el.dataset.mid === id)
+    );
+
+    document.getElementById('missionTitle').innerText = target.title;
+    document.getElementById('missionDesc').innerText  = target.desc;
+    document.getElementById('hintPanel').innerHTML = `
+      <div style="padding:10px; border-left:4px solid var(--gold); background:var(--charcoal-2); border-radius:4px;">
+        <h4 style="margin:0 0 8px 0; color:var(--gold);">?뮕 誘몄뀡 ?깃났 媛?대뱶</h4>
+        <div style="white-space:pre-wrap;">${target.hint}</div>
+      </div>
+    `;
+
+    switchTab('hint');
+
+    // ?묒뾽 怨듦컙: ??λ낯 ?덉쑝硫?蹂듭썝, ?놁쑝硫?鍮?setup/loop
+    if (workspace) {
+      workspace.clear();
+      const restored = WorkspaceStorage.restore(id);
+      if (!restored) {
+        try {
+          const initBlock = workspace.newBlock('arduino_setup_loop');
+          initBlock.initSvg();
+          initBlock.render();
+          initBlock.moveBy(20, 20);
+        } catch (e) {}
+      }
+
+      setTimeout(() => {
+        if (typeof Blockly.svgResize === 'function') Blockly.svgResize(workspace);
+        if (typeof workspace.scrollHome === 'function') workspace.scrollHome();
+      }, 100);
+    }
+
+    // MissionProgress???깅줉 (state 珥덇린??
+    MissionProgress.select(id);
+    MissionProgress.refreshUI();
+  }
+  window.selectMission = selectMission;
+
+  // 援?API ?명솚: loadMission?쇰줈 ?몄텧?섎뒗 怨녹씠 ?덉쑝硫?selectMission?쇰줈 ?꾩엫
+  function loadMission(id) { selectMission(id); }
+
+
+  /* ============================================================
+     C++ 肄붾뱶 誘몃━蹂닿린 媛깆떊
+     ============================================================ */
+  function updateCppCodeView() {
+    if (!workspace || !window.Arduino) return;
+    if (typeof window.resetHeaders === 'function') window.resetHeaders();
+    if (typeof window.v2ResetMaps === 'function') window.v2ResetMaps();
+
+    let bodyCode = '';
+    try { bodyCode = window.Arduino.workspaceToCode(workspace); } catch(e) { /* 臾댁떆 */ }
+
+    let fullCode = `/**\n * CUBELINK Studio v2.7.2 Generated Source\n */\n`;
+    if (window.headerExtras) {
+      window.headerExtras.includes.forEach(inc => fullCode += `${inc}\n`);
+      window.headerExtras.globals.forEach(gl => fullCode += `${gl}\n`);
+      window.headerExtras.helpers.forEach(hp => fullCode += `${hp}\n\n`);
+    }
+
+    fullCode += `\nvoid setup() {\n  // ?쒗뭹 珥덇린??諛??ㅼ젙\n`;
+    const setupBlocks = workspace.getBlocksByType('arduino_setup_loop');
+    if (setupBlocks.length > 0) {
+      try { fullCode += window.Arduino.statementToCode(setupBlocks[0], 'SETUP'); } catch(e) {}
+    } else {
+      fullCode += `  Serial.begin(9600);\n`;
+    }
+    fullCode += `}\n\nvoid loop() {\n`;
+    if (setupBlocks.length > 0) {
+      try { fullCode += window.Arduino.statementToCode(setupBlocks[0], 'LOOP'); } catch(e) {}
+    } else {
+      fullCode += bodyCode;
+    }
+    fullCode += `}\n`;
+
+    const outPre = document.getElementById('cppOut');
+    if (outPre) outPre.innerText = fullCode;
+
+    syncBlocksTo3D();
+  }
+
+  function syncBlocksTo3D() {
+    if (!workspace) return;
+    const allBlocks = workspace.getAllBlocks(false);
+    allBlocks.forEach(b => {
+      if (b.type === 'cubelink_servo_move_simple' || b.type === 'cubelink_servo_smooth_simple' || b.type === 'cubelink_v2_servo_set') {
+        const pin = b.getFieldValue('PIN');
+        const val = parseFloat(b.getFieldValue('ANGLE')) || 90;
+        if (window.Sim && typeof window.Sim.setServoAngle === 'function') {
+          window.Sim.setServoAngle(pin, val);
+        }
+      }
+    });
+  }
+
+  /* ============================================================
+     ???꾪솚
+     ============================================================ */
+  function setupTabEvents() {
+    document.querySelectorAll('.tabs .tab').forEach(t => {
+      t.addEventListener('click', () => switchTab(t.getAttribute('data-tab')));
+    });
+  }
+  function switchTab(tabId) {
+    activeTab = tabId;
+    document.querySelectorAll('.tabs .tab').forEach(t => t.classList.toggle('active', t.getAttribute('data-tab') === tabId));
+    document.querySelectorAll('.tab-body').forEach(b => b.classList.toggle('active', b.getAttribute('data-body') === tabId));
+
+    if (tabId === 'sim') {
+      setTimeout(() => {
+        window.dispatchEvent(new Event('resize'));
+        if (window.Sim && typeof window.Sim.setServoAngle === 'function') syncBlocksTo3D();
+      }, 100);
+    }
+    if ((tabId === 'hint' || tabId === 'cpp') && workspace) {
+      setTimeout(triggerResize, 50);
+    }
+  }
+
+  /* ============================================================
+     怨듯넻 ?ы띁: ?대쫫 ????(?쇱そ/?ㅻⅨ履???
+     ============================================================ */
+  function nameToKey(name) {
+    if (!name) return 'left';
+    const s = String(name).toLowerCase().trim();
+    if (s === '?ㅻⅨ履? || s === 'right' || s === 'r' || s === '2' || s === 'joyright' || s.includes('right')) return 'right';
+    return 'left';
+  }
+
+  /* ============================================================
+     ??媛??됯? ?붿쭊 (evalValue) ??
+     blocks.js ?ㅼ젣 ?꾨뱶紐?湲곗??쇰줈 ?꾨㈃ 蹂댁젙 (v2.7.2)
+     ============================================================ */
+  function evalValue(block) {
+    if (!block) return 0;
+    const t = block.type;
+
+    try {
+      // ??? ?レ옄 / 臾몄옄??由ы꽣?????
+      if (t === 'math_number') return parseFloat(block.getFieldValue('NUM')) || 0;
+      if (t === 'text')        return block.getFieldValue('TEXT') || '';
+
+      // ??? ?곗닠 ???
+      if (t === 'math_arithmetic') {
+        const op = block.getFieldValue('OP');
+        const a = parseFloat(evalValue(block.getInputTargetBlock('A'))) || 0;
+        const b = parseFloat(evalValue(block.getInputTargetBlock('B'))) || 0;
+        switch (op) {
+          case 'ADD':      return a + b;
+          case 'MINUS':    return a - b;
+          case 'MULTIPLY': return a * b;
+          case 'DIVIDE':   return b === 0 ? 0 : a / b;
+          case 'POWER':    return Math.pow(a, b);
+        }
+        return 0;
+      }
+
+      // ??? 鍮꾧탳 ???
+      if (t === 'logic_compare') {
+        const op = block.getFieldValue('OP');
+        const a = parseFloat(evalValue(block.getInputTargetBlock('A')));
+        const b = parseFloat(evalValue(block.getInputTargetBlock('B')));
+        switch (op) {
+          case 'EQ':  return a === b;
+          case 'NEQ': return a !== b;
+          case 'LT':  return a < b;
+          case 'LTE': return a <= b;
+          case 'GT':  return a > b;
+          case 'GTE': return a >= b;
+        }
+        return false;
+      }
+
+      // ??? ?쇰━ ???
+      if (t === 'logic_operation') {
+        const op = block.getFieldValue('OP');
+        const a = evalValue(block.getInputTargetBlock('A'));
+        const b = evalValue(block.getInputTargetBlock('B'));
+        return op === 'AND' ? (a && b) : (a || b);
+      }
+      if (t === 'logic_negate')  return !evalValue(block.getInputTargetBlock('BOOL'));
+      if (t === 'logic_boolean') return block.getFieldValue('BOOL') === 'TRUE';
+
+      // ?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧??
+      // 議곗씠?ㅽ떛 ???듯빀??(援щ쾭??  cubelink_joystick_read
+      //   ?꾨뱶: NAME ('?쇱そ'/'?ㅻⅨ履?), PROP ('X'/'Y'/'BTN')
+      // ?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧??
+      if (t === 'cubelink_joystick_read') {
+        const name = block.getFieldValue('NAME') || '?쇱そ';
+        const prop = block.getFieldValue('PROP') || 'X';
+        const key  = nameToKey(name);
+        const data = window.joystickData?.[key] || { x:500, y:500, sw:0 };
+        if (prop === 'Y')   return data.y;
+        if (prop === 'BTN') return data.sw ? 1 : 0;
+        return data.x;
+      }
+
+      // ?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧??
+      // 議곗씠?ㅽ떛 ??v2 遺꾨━?? cubelink_v2_joystick_x/y/btn
+      //   ?꾨뱶: JNAME ('?쇱そ'/'?ㅻⅨ履?)
+      // ?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧??
+      if (t === 'cubelink_v2_joystick_x') {
+        const key = nameToKey(block.getFieldValue('JNAME'));
+        return window.joystickData?.[key]?.x ?? 500;
+      }
+      if (t === 'cubelink_v2_joystick_y') {
+        const key = nameToKey(block.getFieldValue('JNAME'));
+        return window.joystickData?.[key]?.y ?? 500;
+      }
+      if (t === 'cubelink_v2_joystick_btn') {
+        const key = nameToKey(block.getFieldValue('JNAME'));
+        return window.joystickData?.[key]?.sw ? 1 : 0;
+      }
+
+      // ?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧??
+      // ?쒕낫 ?꾩옱 媛곷룄  cubelink_servo_read / cubelink_v2_servo_read
+      //   ?꾨뱶: PIN ('6'/'9'/'10'/'11' ??
+      // ?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧??
+      if (t === 'cubelink_servo_read' || t === 'cubelink_v2_servo_read') {
+        const pin = block.getFieldValue('PIN');
+        const span = document.getElementById('servoAngle' + pin);
+        if (span) {
+          const v = parseFloat(span.innerText);
+          if (!isNaN(v)) return v;
+        }
+        return window.servoAngles[pin] != null ? window.servoAngles[pin] : 90;
+      }
+
+      // ?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧??
+      // map ??媛??낅젰?? cubelink_map
+      //   ?낅젰: VAL  /  ?꾨뱶: FL, FH, TL, TH
+      // ?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧??
+      if (t === 'cubelink_map') {
+        const v  = parseFloat(evalValue(block.getInputTargetBlock('VAL'))) || 0;
+        const fL = parseFloat(block.getFieldValue('FL')) || 0;
+        const fH = parseFloat(block.getFieldValue('FH')) || 1023;
+        const tL = parseFloat(block.getFieldValue('TL')) || 0;
+        const tH = parseFloat(block.getFieldValue('TH')) || 180;
+        if (fH === fL) return tL;
+        return Math.round((v - fL) * (tH - tL) / (fH - fL) + tL);
+      }
+
+      // ?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧??
+      // map ???꾨뱶?? cubelink_map_simple
+      //   ?꾨뱶: VAL, FL, FH, TL, TH (?꾨? number ?꾨뱶)
+      // ?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧??
+      if (t === 'cubelink_map_simple') {
+        const v  = parseFloat(block.getFieldValue('VAL')) || 0;
+        const fL = parseFloat(block.getFieldValue('FL')) || 0;
+        const fH = parseFloat(block.getFieldValue('FH')) || 1023;
+        const tL = parseFloat(block.getFieldValue('TL')) || 0;
+        const tH = parseFloat(block.getFieldValue('TH')) || 180;
+        if (fH === fL) return tL;
+        return Math.round((v - fL) * (tH - tL) / (fH - fL) + tL);
+      }
+
+      // ?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧??
+      // ?꾨궇濡쒓렇 ? ?쎄린  cubelink_analogread
+      //   A0=?쇱そX, A1=?쇱そY, A2=?ㅻⅨ履폵, A3=?ㅻⅨ履폶
+      // ?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧??
+      if (t === 'cubelink_analogread') {
+        const pin = block.getFieldValue('PIN');
+        if (pin === 'A0') return window.joystickData?.left?.x  ?? 500;
+        if (pin === 'A1') return window.joystickData?.left?.y  ?? 500;
+        if (pin === 'A2') return window.joystickData?.right?.x ?? 500;
+        if (pin === 'A3') return window.joystickData?.right?.y ?? 500;
+        return 0;
+      }
+
+      // ?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧??
+      // ?붿???? ?쎄린  cubelink_digitalread
+      //   PIN 2 = ?쇱そ SW (INPUT_PULLUP ???뚮┝=LOW=0)
+      //   PIN 7 = ?ㅻⅨ履?SW
+      //   PIN 13 = LED (?붿???異쒕젰 ?곹깭 諛섏쁺)
+      // ?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧??
+      if (t === 'cubelink_digitalread') {
+        const pin = block.getFieldValue('PIN');
+        if (pin === '2') return window.joystickData?.left?.sw  ? 0 : 1;
+        if (pin === '7') return window.joystickData?.right?.sw ? 0 : 1;
+        return 1;
+      }
+
+      // ?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧??
+      // 珥덉쓬?? cubelink_ultrasonic
+      //   ?꾨뱶: TRIG, ECHO  (?쒕??덉씠?섏뿉?쒕뒗 ?щ씪?대뜑 媛?諛섑솚)
+      // ?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧?먥븧??
+      if (t === 'cubelink_ultrasonic') {
+        return window._ultrasonicValue != null ? window._ultrasonicValue : 30;
+      }
+
+      // ??? 蹂?????
+      if (t === 'variables_get') {
+        const name = block.getField('VAR') ? block.getField('VAR').getText() : block.getFieldValue('VAR');
+        return (window._userVars[name] != null) ? window._userVars[name] : 0;
+      }
+
+      // ??? ?대갚: NUM ?꾨뱶媛 ?덉쑝硫??レ옄濡????
+      const numField = block.getFieldValue('NUM');
+      if (numField != null) return parseFloat(numField) || 0;
+
+    } catch (e) {
+      console.warn('evalValue ?ㅻ쪟:', t, e.message);
+    }
+    return 0;
+  }
+  window.evalValue = evalValue;
+
+  /* ============================================================
+     怨듯넻 ?ㅽ뻾 ?붿쭊 (?ㅼ떆媛?+ ?쒕??덉씠?? ???덉쟾?μ튂 ?ы븿
+     ============================================================ */
+  async function runProgram() {
+        // v2.8.9: ?대? ?ㅽ뻾 以묒씠硫?臾댁떆 (以묐났 ?몄텧 諛⑹?)
+    if (window._runtimeRunning) {
+      window._runtimeRunning = false;
+      appendSerialLog("??以묐떒 ?붿껌");
+      return;
+    }
+    const simOnly = window._simulationOnly === true;
+    window._simulationOnly = false;
+    const port = window._serialPort;
+    const useSerial = !simOnly && port && port.writable;
+
+    // ?덉쟾?μ튂
+    let loopCount = 0;
+    const MAX_TOTAL_LOOPS = 100000;
+    let startTime = performance.now();
+    let warnedTooFast = false;
+
+    function safeAngle(pin, angle, blockType) {
+      const a = parseFloat(angle);
+      if (isNaN(a)) {
+        appendSerialLog(`?좑툘 [${blockType}] PIN ${pin}: 媛곷룄媛믪씠 ?レ옄媛 ?꾨떂 (${angle}) ??臾댁떆`);
+        return null;
+      }
+      if (a < 0 || a > 180) {
+        const clamped = Math.max(0, Math.min(180, a));
+        appendSerialLog(`?좑툘 [${blockType}] PIN ${pin}: 媛곷룄 ${Math.round(a)}째 ??${Math.round(clamped)}째濡?蹂댁젙`);
+        return clamped;
+      }
+      return a;
+    }
+
+    if (!simOnly && !useSerial) {
+      if (!confirm("濡쒕큸???곌껐?섏? ?딆븯?듬땲?? 3D ?쒕??덉씠?섎쭔 ?ㅽ뻾?좉퉴??")) return;
+    }
+
+
+    window._runtimeRunning = true;
+
+    const writer = useSerial ? port.writable.getWriter() : null;
+    const enc = new TextEncoder();
+    const btnRT = document.getElementById(simOnly ? 'btnSimStart' : 'btnRunRealtime');
+    const originalText = btnRT ? btnRT.textContent : '';
+    if (btnRT) btnRT.textContent = '???ㅽ뻾 以?(?대┃?섏뿬 以묐떒)';
+        const btnOther = document.getElementById(simOnly ? 'btnRunRealtime' : 'btnSimStart');
+    if (btnOther) { btnOther.disabled = true; btnOther.style.opacity = '0.4'; btnOther.style.cursor = 'not-allowed'; }
+
+    const simStatusEl = document.getElementById('simStatus');
+    if (simStatusEl) { simStatusEl.textContent = '???ㅽ뻾 以?; simStatusEl.classList.add('running'); }
+
+
+    const setupRoot = workspace.getBlocksByType('arduino_setup_loop')[0];
+    if (!setupRoot) {
+      appendSerialLog("?좑툘 setup/loop 釉붾줉???놁뒿?덈떎");
+      window._runtimeRunning = false;
+      if (btnRT) btnRT.textContent = originalText;
+      if (writer) writer.releaseLock();
+      if (simStatusEl) { simStatusEl.textContent = '???湲?以?; simStatusEl.classList.remove('running'); }
+      return;
+    }
+    // v2.9.1: ?ㅽ뻾 以??몄쭛 ?좉툑 (?쒕?=湲덉깋, ?ㅼ떆媛?鍮④컯) ??setup ?뺤씤 ??耳?
+    showRunLock(!simOnly);
+    const setupChain = setupRoot.getInputTargetBlock('SETUP');
+    const loopChain  = setupRoot.getInputTargetBlock('LOOP');
+
+    const chainToArray = (head) => {
+      const arr = [];
+      let cur = head;
+      while (cur) { arr.push(cur); cur = cur.getNextBlock(); }
+      return arr;
+    };
+
+    // ??? ?쒕낫 ?꾩넚 怨듯넻 ???
+async function sendServo(pin, angle) {
+  // ★ 서보 명령 시 3D 뷰 확대 트리거
+  if (typeof window.triggerRobotZoom === 'function') {
+    window.triggerRobotZoom();
+  }
+  // v2.8.9: 紐⑤뱶蹂?遺꾧린
+  const sendReal = !window.shouldSendToRobot   || window.shouldSendToRobot();
+  const sendSim  = simOnly || !window.shouldUpdateGraphic || window.shouldUpdateGraphic();
+
+  if (sendReal && writer) {
+    // ??罹섎━釉뚮젅?댁뀡: ?ㅻЪ ?꾩넚 媛곷룄 = 紐낅졊 媛곷룄 + ?대떦 ? Offset
+    const off = (window.getServoOffset ? window.getServoOffset(pin) : 0);
+    let realAngle = Math.round(angle + off);
+    if (String(pin) === '11') realAngle = Math.max(50, Math.min(120, realAngle)); // 洹몃━??蹂댄샇
+    else realAngle = Math.max(0, Math.min(180, realAngle));                       // ?쇰컲 異?蹂댄샇
+
+    try { await writer.write(enc.encode(`S,${pin},${realAngle}\n`)); }
+    catch(e) {
+      appendSerialLog(`?썞 ?쒕━???딄? ???ㅽ뻾 以묒?: ${e.message}`);
+      window._runtimeRunning = false;
+      return;
+    }
+  }
+
+  if (sendSim && window.Sim) Sim.setServoAngle(pin, angle);
+  window.servoAngles[pin] = angle;
+  if (window.MissionProgress) MissionProgress.onSimEvent({ type: 'servo', pin: parseInt(pin), angle: parseFloat(angle) });
+}
+
+
+    // ??? ?⑥씪 釉붾줉 ?ㅽ뻾 ???
+    const execBlock = async (b) => {
+      if (!window._runtimeRunning) return;
+      const t = b.type;
+
+      try {
+        // ?먥븧???쒕낫 ???꾨뱶 吏곸젒 ?낅젰???먥븧??
+        if (t === 'cubelink_servo_move_simple' || t === 'cubelink_v2_servo_set') {
+          const pin   = b.getFieldValue('PIN');
+          const angle = safeAngle(pin, b.getFieldValue('ANGLE'), t);
+          if (angle === null) return;
+          await sendServo(pin, angle);
+          appendSerialLog(`  S,${pin},${angle}`);
+          await new Promise(r => setTimeout(r, 30));
+          return;
+        }
+
+        // ?먥븧???쒕낫 ??媛??낅젰???먥븧??
+        if (t === 'cubelink_servo_move' || t === 'cubelink_v2_servo_set_value') {
+          const pin   = b.getFieldValue('PIN');
+          const inner = b.getInputTargetBlock('ANGLE');
+          const raw   = inner ? evalValue(inner) : 90;
+          const angle = safeAngle(pin, raw, t);
+          if (angle === null) return;
+          await sendServo(pin, angle);
+          appendSerialLog(`  S,${pin},${angle}`);
+          await new Promise(r => setTimeout(r, 30));
+          return;
+        }
+
+        // ?먥븧???쒕낫 ??遺?쒕읇寃?(?꾨뱶?? ?먥븧??
+        if (t === 'cubelink_servo_smooth_simple') {
+          const pin    = b.getFieldValue('PIN');
+          const target = safeAngle(pin, b.getFieldValue('ANGLE'), t);
+          if (target === null) return;
+          const sec    = parseFloat(b.getFieldValue('SEC')) || 1;
+          const steps  = Math.max(5, Math.floor(sec * 20));
+          const start  = window.servoAngles[pin] != null ? window.servoAngles[pin] : 90;
+          for (let i = 1; i <= steps; i++) {
+            if (!window._runtimeRunning) return;
+            const a = Math.round(start + (target - start) * (i / steps));
+            await sendServo(pin, a);
+            await new Promise(r => setTimeout(r, (sec * 1000) / steps));
+          }
+          return;
+        }
+
+        // ?먥븧???쒕낫 ??遺?쒕읇寃?(媛??낅젰?? ?먥븧??
+        if (t === 'cubelink_servo_smooth') {
+          const pin    = b.getFieldValue('PIN');
+          const inner  = b.getInputTargetBlock('ANGLE');
+          const raw    = inner ? evalValue(inner) : 90;
+          const target = safeAngle(pin, raw, t);
+          if (target === null) return;
+          const sec    = parseFloat(b.getFieldValue('SEC')) || 1;
+          const steps  = Math.max(5, Math.floor(sec * 20));
+          const start  = window.servoAngles[pin] != null ? window.servoAngles[pin] : 90;
+          for (let i = 1; i <= steps; i++) {
+            if (!window._runtimeRunning) return;
+            const a = Math.round(start + (target - start) * (i / steps));
+            await sendServo(pin, a);
+            await new Promise(r => setTimeout(r, (sec * 1000) / steps));
+          }
+          return;
+        }
+
+        // ?먥븧???쒕낫 attach (?쒕??먯꽑 濡쒓렇留? ?먥븧??
+        if (t === 'cubelink_servo_attach') {
+          const pin = b.getFieldValue('PIN');
+          appendSerialLog(`?뵩 ?쒕낫 ? ${pin} ?곌껐`);
+          return;
+        }
+
+        // ?먥븧???쒕젅???먥븧??
+        if (t === 'cubelink_delay' || t === 'cubelink_v2_delay_ms') {
+          const ms = parseInt(b.getFieldValue('MS'), 10) || 0;
+          await new Promise(r => setTimeout(r, ms));
+          return;
+        }
+        if (t === 'cubelink_delay_sec') {
+          const sec = parseFloat(b.getFieldValue('SEC')) || 0;
+          await new Promise(r => setTimeout(r, sec * 1000));
+          return;
+        }
+        if (t === 'cubelink_delay_us') {
+          // 留덉씠?щ줈珥??⑥쐞??釉뚮씪?곗??먯꽌 ?뺥솗 ?쒖뼱 遺덇? ??理쒖냼 1ms濡?蹂??
+          const us = parseInt(b.getFieldValue('US'), 10) || 0;
+          const ms = Math.max(1, Math.round(us / 1000));
+          await new Promise(r => setTimeout(r, ms));
+          return;
+        }
+
+        // ?먥븧??pinMode (?쒕??먯꽑 濡쒓렇留? ?먥븧??
+        if (t === 'cubelink_pinmode') {
+          const pin  = b.getFieldValue('PIN');
+          const mode = b.getFieldValue('MODE');
+          appendSerialLog(`?뵩 pinMode(${pin}, ${mode})`);
+          return;
+        }
+
+        // ?먥븧???붿???異쒕젰 (LED ?? ?먥븧??
+        if (t === 'cubelink_digitalwrite') {
+          const pin = b.getFieldValue('PIN');
+          const val = b.getFieldValue('VAL') === 'HIGH' ? 1 : 0;
+          if (writer) await writer.write(enc.encode(`L,${pin},${val}\n`));
+          // PIN 13 LED UI 諛섏쁺
+          if (pin === '13') {
+            const led = document.getElementById('led13');
+            if (led) led.style.background = val ? '#ff4444' : '#222';
+          }
+           if (window.MissionProgress) MissionProgress.onSimEvent({ type: 'led', pin: parseInt(pin), on: val === 1 });
+          appendSerialLog(`  L,${pin},${val}`);
+          await new Promise(r => setTimeout(r, 20));
+          return;
+        }
+
+        // ?먥븧???쒕━???듭떊 ?쒖옉 ?먥븧??
+        if (t === 'cubelink_serial_begin' || t === 'cubelink_v2_serial_begin') {
+          const baud = b.getFieldValue('BAUD');
+          appendSerialLog(`?뱻 ?쒕━???쒖옉 (${baud} bps)`);
+          return;
+        }
+
+        // ?먥븧???쒕━??異쒕젰 ???띿뒪???먥븧??
+        if (t === 'cubelink_serial_println_text') {
+          appendSerialLog(`?뱾 ${b.getFieldValue('TEXT')}`);
+            if (window.MissionProgress) MissionProgress.onSimEvent({ type: 'serial' });
+          return;
+        }
+
+        // ?먥븧???쒕━??異쒕젰 ???レ옄 ?먥븧??
+        if (t === 'cubelink_serial_println_num') {
+          appendSerialLog(`?뱾 ${b.getFieldValue('NUM')}`);
+           if (window.MissionProgress) MissionProgress.onSimEvent({ type: 'serial' });
+          return;
+        }
+
+        // ?먥븧???쒕━??異쒕젰 ??媛??낅젰 ?щ’) ?먥븧??
+        if (t === 'cubelink_serial_println_value') {
+          const inner = b.getInputTargetBlock('VAL');
+          const v = inner ? evalValue(inner) : 0;
+          appendSerialLog(`?뱾 ${v}`);
+           if (window.MissionProgress) MissionProgress.onSimEvent({ type: 'serial' });
+          return;
+        }
+
+        // ?먥븧??議곗씠?ㅽ떛 珥덇린??(援щ쾭?? cubelink_joystick_init ?먥븧??
+        //   ?꾨뱶: NAME, VRX, VRY, SW
+        if (t === 'cubelink_joystick_init') {
+          const name = b.getFieldValue('NAME') || '?쇱そ';
+          const vrx  = b.getFieldValue('VRX');
+          const vry  = b.getFieldValue('VRY');
+          const sw   = b.getFieldValue('SW');
+          appendSerialLog(`?빘 議곗씠?ㅽ떛(${name}) 珥덇린??VRx=${vrx} VRy=${vry} SW=${sw}`);
+          if (writer) await writer.write(enc.encode(`J,INIT,${name},${vrx},${vry},${sw}\n`));
+          return;
+        }
+
+        // ?먥븧??議곗씠?ㅽ떛 珥덇린??(v2) cubelink_v2_joystick_init ?먥븧??
+        //   ?꾨뱶: JNAME, VRX, VRY, SW
+        if (t === 'cubelink_v2_joystick_init') {
+          const name = b.getFieldValue('JNAME') || '?쇱そ';
+          const vrx  = b.getFieldValue('VRX');
+          const vry  = b.getFieldValue('VRY');
+          const sw   = b.getFieldValue('SW');
+          appendSerialLog(`?빘 v2 議곗씠?ㅽ떛(${name}) 珥덇린??VRx=${vrx} VRy=${vry} SW=${sw}`);
+          if (writer) await writer.write(enc.encode(`J,INIT,${name},${vrx},${vry},${sw}\n`));
+          return;
+        }
+
+        // ?먥븧??諛섎났臾?N???먥븧??
+        if (t === 'cubelink_repeat_n' || t === 'controls_repeat_ext') {
+          let times = 0;
+          if (t === 'controls_repeat_ext') {
+            const inner = b.getInputTargetBlock('TIMES');
+            times = parseInt(evalValue(inner), 10) || 0;
+          } else {
+            times = parseInt(b.getFieldValue('TIMES'), 10) || 0;
+          }
+          if (times > 1000) appendSerialLog(`?좑툘 諛섎났 ${times}????1000?뚮줈 ?쒗븳`);
+          const safeTimes = Math.min(times, 1000);
+          const inner = chainToArray(b.getInputTargetBlock('DO'));
+          for (let i = 0; i < safeTimes; i++) {
+            if (!window._runtimeRunning) return;
+            for (const ib of inner) {
+              if (!window._runtimeRunning) return;
+              await execBlock(ib);
+            }
+          }
+          return;
+        }
+
+        // ?먥븧??議곌굔臾?if / elseif / else (Blockly ?쒖?) ?먥븧??
+        if (t === 'controls_if') {
+          let idx = 0;
+          let matched = false;
+          while (true) {
+            const condBlock = b.getInputTargetBlock('IF' + idx);
+            if (!condBlock) break;
+            const result = evalValue(condBlock);
+            if (result) {
+              const doBlock = b.getInputTargetBlock('DO' + idx);
+              if (doBlock) {
+                const arr = chainToArray(doBlock);
+                for (const ib of arr) {
+                  if (!window._runtimeRunning) return;
+                  await execBlock(ib);
+                }
+              }
+              matched = true;
+              break;
+            }
+            idx++;
+          }
+          if (!matched) {
+            const elseBlock = b.getInputTargetBlock('ELSE');
+            if (elseBlock) {
+              const arr = chainToArray(elseBlock);
+              for (const ib of arr) {
+                if (!window._runtimeRunning) return;
+                await execBlock(ib);
+              }
+            }
+          }
+          return;
+        }
+
+        // ?먥븧??議곌굔臾???controls_ifelse (釉붾줉 1媛쒖뿉 if+else 怨좎젙) ?먥븧??
+        if (t === 'controls_ifelse') {
+          const cond = evalValue(b.getInputTargetBlock('IF0'));
+          const target = cond ? 'DO0' : 'ELSE';
+          const arr = chainToArray(b.getInputTargetBlock(target));
+          for (const ib of arr) {
+            if (!window._runtimeRunning) return;
+            await execBlock(ib);
+          }
+          return;
+        }
+
+        // ?먥븧??v2 議곌굔臾???cubelink_v2_if / cubelink_v2_if_else ?먥븧??
+        //   ?낅젰: COND (Boolean), DO, ELSE
+        if (t === 'cubelink_v2_if' || t === 'cubelink_v2_if_else') {
+          const cond = evalValue(b.getInputTargetBlock('COND'));
+          if (cond) {
+            const arr = chainToArray(b.getInputTargetBlock('DO'));
+            for (const ib of arr) {
+              if (!window._runtimeRunning) return;
+              await execBlock(ib);
+            }
+          } else if (t === 'cubelink_v2_if_else') {
+            const arr = chainToArray(b.getInputTargetBlock('ELSE'));
+            for (const ib of arr) {
+              if (!window._runtimeRunning) return;
+              await execBlock(ib);
+            }
+          }
+          return;
+        }
+
+        // ?먥븧??蹂???ㅼ젙 ?먥븧??
+        if (t === 'variables_set') {
+          const field = b.getField('VAR');
+          const name  = field ? field.getText() : b.getFieldValue('VAR');
+          const inner = b.getInputTargetBlock('VALUE');
+          window._userVars[name] = inner ? evalValue(inner) : 0;
+          return;
+        }
+
+        // ?먥븧??蹂??利앷컧 ?먥븧??
+        if (t === 'math_change') {
+          const field = b.getField('VAR');
+          const name  = field ? field.getText() : b.getFieldValue('VAR');
+          const inner = b.getInputTargetBlock('DELTA');
+          const delta = inner ? parseFloat(evalValue(inner)) || 0 : 0;
+          const cur   = window._userVars[name] != null ? window._userVars[name] : 0;
+          window._userVars[name] = cur + delta;
+          return;
+        }
+
+        // ?????녿뒗 釉붾줉 ??議곗슜??臾댁떆
+      } catch (blockErr) {
+        appendSerialLog(`??[${t}] 釉붾줉 ?ㅽ뻾 ?ㅻ쪟: ${blockErr.message}`);
+        console.error('釉붾줉 ?ㅽ뻾 ?ㅻ쪟:', t, blockErr);
+      }
+    };
+
+    const execChain = async (arr) => {
+      for (const b of arr) {
+        if (!window._runtimeRunning) return;
+        await execBlock(b);
+      }
+    };
+
+    try {
+      const setupArr = chainToArray(setupChain);
+      const loopArr  = chainToArray(loopChain);
+
+      appendSerialLog("??setup ?ㅽ뻾");
+      await execChain(setupArr);
+
+      if (loopArr.length > 0) {
+        appendSerialLog("?봺 loop ?쒖옉");
+        while (window._runtimeRunning) {
+          loopCount++;
+
+          // ?덉쟾 1: 珥?諛섎났 ?쒗븳
+          if (loopCount > MAX_TOTAL_LOOPS) {
+            appendSerialLog(`?썞 ?덉쟾 ?뺤?: 諛섎났 ${MAX_TOTAL_LOOPS}??珥덇낵`);
+            break;
+          }
+
+          // ?ㅼ젣 loop 蹂몃Ц ?ㅽ뻾
+          const beforeBody = performance.now();
+          await execChain(loopArr);
+          const bodyDuration = performance.now() - beforeBody;
+
+            // ?덉쟾 2 (v2.8.9): 留?猷⑦봽 臾댁“嫄??묐낫 (釉뚮씪?곗? ?묐떟??蹂댁옣)
+          await new Promise(r => setTimeout(r, bodyDuration < 5 ? 10 : 1));
+          // 異붽?: 100?뚮쭏??1?꾨젅???묐낫 (?μ떆媛??ㅽ뻾 ??硫붾え由??뚮뜑 ?덉젙??
+          if (loopCount % 100 === 0) {
+            await new Promise(r => requestAnimationFrame(r));
+          }
+  
+
+          // ?덉쟾 3: 鍮좊Ⅸ 猷⑦봽 寃쎄퀬 (??踰덈쭔)
+          const elapsedSec = (performance.now() - startTime) / 1000;
+          if (!warnedTooFast && elapsedSec > 2 && (loopCount / elapsedSec) > 300) {
+            appendSerialLog(`?좑툘 loop媛 ?덈Т 鍮좊쫭?덈떎 (${Math.round(loopCount/elapsedSec)}??珥? ??'ms 湲곕떎由ш린' 釉붾줉 異붽? 沅뚯옣`);
+            warnedTooFast = true;
+          }
+        }
+      }
+      appendSerialLog("???ㅽ뻾 醫낅즺");
+    } catch (e) {
+      appendSerialLog(`???ㅽ뻾 ?ㅻ쪟: ${e.message}`);
+      console.error('runProgram ?곸꽭 ?ㅻ쪟:', e);
+    } finally {
+      window._runtimeRunning = false;
+      if (btnRT) btnRT.textContent = originalText;
+            if (btnOther) { btnOther.disabled = false; btnOther.style.opacity = ''; btnOther.style.cursor = ''; }
+      try { if (writer) writer.releaseLock(); } catch(_) {}
+      if (simStatusEl) { simStatusEl.textContent = '???湲?以?; simStatusEl.classList.remove('running'); }
+            hideRunLock(); // v2.9.1: ?ㅽ뻾 醫낅즺 ???좉툑 ?댁젣
+
+      const totalSec = ((performance.now() - startTime) / 1000).toFixed(1);
+      appendSerialLog(`?뱤 珥?${loopCount}??諛섎났, ${totalSec}珥??뚯슂`);
+    }
+  }
+  window.runProgram = runProgram;
+
+  /* ============================================================
+     踰꾪듉 ?대깽??
+     ============================================================ */
+  function setupButtonEvents() {
+      document.getElementById('btnClear')?.addEventListener('click', () => {
+      if (confirm('?묒꽦 以묒씤 釉붾줉 肄붾뱶瑜?紐⑤몢 吏?곗떆寃좎뒿?덇퉴?\n(?꾩옱 誘몄뀡????λ낯???④퍡 ??젣?⑸땲??)')) {
+        workspace.clear();
+        if (MissionProgress.current) {
+          WorkspaceStorage.clear(MissionProgress.current);
+        }
+        try {
+          const initBlock = workspace.newBlock('arduino_setup_loop');
+          initBlock.initSvg();
+          initBlock.render();
+          initBlock.moveBy(20, 20);
+        } catch (e) {}
+        setTimeout(triggerResize, 50);
+      }
+    });
+    document.getElementById('btnResetProgress')?.addEventListener('click', () => {
+      const hasProgress = MissionProgress.done.size > 0;
+      const hasSavedWork = Object.keys(localStorage).some(k => k.startsWith('cubelink_ws_'));
+      if (!hasProgress && !hasSavedWork) {
+        alert('珥덇린?뷀븷 ?댁슜???놁뒿?덈떎.');
+        return;
+      }
+      if (confirm(`誘몄뀡 ?꾨즺 湲곕줉(${MissionProgress.done.size}媛?怨?n??λ맂 ?묒뾽臾쇱쓣 紐⑤몢 ??젣?⑸땲??\n怨꾩냽?섏떆寃좎뒿?덇퉴?`)) {
+        MissionProgress.reset();
+        WorkspaceStorage.clearAll();
+        alert('??紐⑤몢 珥덇린?붾릺?덉뒿?덈떎.');
+        if (MissionProgress.current && workspace) {
+          workspace.clear();
+          try {
+            const initBlock = workspace.newBlock('arduino_setup_loop');
+            initBlock.initSvg();
+            initBlock.render();
+            initBlock.moveBy(20, 20);
+          } catch (e) {}
+        }
+      }
+    });
+
+
+    document.getElementById('btnReload')?.addEventListener('click', () => {
+      if (!currentMissionId) return;
+      if (!confirm('?꾩옱 ?묒뾽??踰꾨━怨?誘몄뀡???ㅼ떆 泥섏쓬遺???쒖옉?섏떆寃좎뒿?덇퉴?\n(??λ맂 ?묒뾽臾쇰룄 ??젣?⑸땲??)')) return;
+      // 1. ??λ낯 ??젣
+      WorkspaceStorage.clear(currentMissionId);
+      // 2. workspace 珥덇린??(鍮?setup/loop)
+      if (workspace) {
+        workspace.clear();
+        try {
+          const initBlock = workspace.newBlock('arduino_setup_loop');
+          initBlock.initSvg();
+          initBlock.render();
+          initBlock.moveBy(20, 20);
+        } catch (e) {}
+      }
+      // 3. MissionProgress state 珥덇린??(寃利??곹깭 由ъ뀑)
+      if (window.MissionProgress) {
+        MissionProgress.state = {};
+      }
+      setTimeout(triggerResize, 50);
+      console.log('?봽 誘몄뀡 ?ㅼ떆 ?쒖옉:', currentMissionId);
+    });
+
+    document.getElementById('btnClearSerial')?.addEventListener('click', () => {
+      const sm = document.getElementById('serialMonitor');
+      if (sm) sm.innerText = '';
+    });
+
+    document.getElementById('btnToggleSerial')?.addEventListener('click', (e) => {
+      const bar = document.querySelector('.serial-monitor-bar');
+      bar.classList.toggle('collapsed');
+      e.target.innerText = bar.classList.contains('collapsed') ? '???쇱튂湲? : '???묎린';
+      setTimeout(triggerResize, 150);
+    });
+
+    document.getElementById('btnRunRealtime')?.addEventListener('click', () => {
+      if (!window._serialPort || !window._serialPort.writable) {
+        alert('濡쒕큸???곌껐?섏? ?딆븯?듬땲??\n?쒕??덉씠???쒖옉 ?⑥텛瑜??꾨Ⅴ?몄슂');
+        return;
+      }
+      runProgram();
+    });
+
+    document.getElementById('btnSimStart')?.addEventListener('click', () => {
+      window._simulationOnly = true;
+      runProgram();
+    });
+
+    document.getElementById('btnSimStop')?.addEventListener('click', () => {
+      window._runtimeRunning = false;
+      const status = document.getElementById('simStatus');
+      if (status) { status.textContent = '???뺤???; status.classList.remove('running'); }
+    });
+  }
+  /* ============================================================
+     orphan 釉붾줉 ?먮룞 寃쎄퀬 (v2.8.0)
+     setup/loop???곌껐?섏? ?딆? 釉붾줉????寃쎄퀬 ?쒖떆
+     ============================================================ */
+  function highlightOrphans() {
+    if (!workspace) return;
+    workspace.getAllBlocks(false).forEach(b => {
+      try {
+        if (b.type === 'arduino_setup_loop') { b.setWarningText(null); return; }
+        const root = b.getRootBlock();
+        if (!root || root.type !== 'arduino_setup_loop') {
+          b.setWarningText('??setup/loop???곌껐?섏? ?딆? 釉붾줉?낅땲??\n?ㅽ뻾 ??臾댁떆?⑸땲??');
+        } else {
+          b.setWarningText(null);
+        }
+      } catch (e) {}
+    });
+  }
+  window.highlightOrphans = highlightOrphans;
+  /* ============================================================
+     v2.9.1 ???ㅽ뻾 以??좉툑 ?ㅻ쾭?덉씠
+     ?ㅽ뻾 以??쇱そ 誘몄뀡 ?⑤꼸 + 媛?대뜲 ?뚰겕?ㅽ럹?댁뒪 ?대┃ 李⑤떒
+     ============================================================ */
+  function showRunLock(isRealtime) {
+    hideRunLock(); // 以묐났 諛⑹?
+    const colorClass = isRealtime ? 'real' : 'sim';
+    const mainMsg = isRealtime
+      ? '???ㅻЪ 濡쒕큸 ?ㅽ뻾 以묒엯?덈떎.<br>???뺤? ???몄쭛?섏꽭??'
+      : '?렜 ?쒕??덉씠???ㅽ뻾 以묒엯?덈떎.<br>???뺤? ???몄쭛?섏꽭??';
+    const targets = [
+      { el: document.querySelector('.panel-center'), compact: false, msg: mainMsg },
+      { el: document.querySelector('.panel-left'),   compact: true,  msg: '?뵏 ?ㅽ뻾 以? }
+    ];
+    targets.forEach(t => {
+      if (!t.el) return;
+      if (getComputedStyle(t.el).position === 'static') {
+        t.el.dataset.runlockPos = '1';
+        t.el.style.position = 'relative';
+      }
+      const ov = document.createElement('div');
+      ov.className = 'run-lock-overlay ' + colorClass + (t.compact ? ' compact' : '');
+      ov.innerHTML = `<div class="run-lock-msg">${t.msg}</div>`;
+           // ?쇄뼹??v2.9.4 援먯껜: ?쒕━??紐⑤땲?곕? ?ㅻ쾭?덉씠 ?꾨줈 ?뚯뼱?щ젮 ??긽 蹂댁씠寃??쇄뼹??
+      if (t.compact) {
+        const monitor = document.getElementById('serialMonitorBar');
+        // ?쒕━??紐⑤땲?곌? ???⑤꼸 ?덉뿉 ?덉쓣 ?뚮쭔 (議몄뾽 ???쇰컲 紐⑤뱶)
+        if (monitor && monitor.parentElement === t.el) {
+          // 1) ?ㅻ쾭?덉씠 ?섎떒???쒕━??紐⑤땲???믪씠留뚰겮 鍮꾩? (?대┃ 李⑤떒 ?곸뿭?먯꽌 ?쒖쇅)
+          ov.style.bottom = monitor.offsetHeight + 'px';
+          // 2) ?쒕━??紐⑤땲?곕? ?ㅻ쾭?덉씠(z-index:5000)蹂대떎 ?꾨줈 ?щ젮 ?뺤떎???몄텧
+          monitor.dataset.runlockZ = monitor.style.zIndex || '';
+          monitor.style.position = 'relative';
+          monitor.style.zIndex = '5001';
+        }
+      }
+      // ?꿎뼯??援먯껜 ???꿎뼯??
+   ov.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (window.showToast) {
+          window.showToast(isRealtime
+            ? '???ㅻЪ ?ㅽ뻾 以????뺤? ???몄쭛?섏꽭??
+            : '?렜 ?쒕? ?ㅽ뻾 以????뺤? ???몄쭛?섏꽭??, 'warn', 2000);
+        }
+      });
+      t.el.appendChild(ov);
+    });
+  }
+
+  function hideRunLock() {
+    document.querySelectorAll('.run-lock-overlay').forEach(ov => ov.remove());
+    document.querySelectorAll('[data-runlock-pos="1"]').forEach(el => {
+      el.style.position = '';
+      delete el.dataset.runlockPos;
+    });
+    // v2.9.4: ?쒕━??紐⑤땲??z-index ?먯긽蹂듦뎄
+    const monitor = document.getElementById('serialMonitorBar');
+    if (monitor && monitor.dataset.runlockZ !== undefined) {
+      monitor.style.zIndex = monitor.dataset.runlockZ;
+      monitor.style.position = '';
+      if (!monitor.style.zIndex) monitor.style.removeProperty('z-index');
+      delete monitor.dataset.runlockZ;
+    }
+  }
+ window.showRunLock = showRunLock;
+  window.hideRunLock = hideRunLock;
+
+
+  function appendSerialLog(msg) {
+    const sm = document.getElementById('serialMonitor');
+    if (!sm) return;
+    sm.innerText += msg + "\n";
+    // v2.9.1: 濡쒓렇 ??＜ 諛⑹? ??500以?珥덇낵 ???ㅻ옒??以??쒓굅 (癒뱁넻 諛⑹?)
+    const lines = sm.innerText.split('\n');
+    if (lines.length > 500) {
+      sm.innerText = lines.slice(-400).join('\n') + "\n";
+    }
+    sm.scrollTop = sm.scrollHeight;
+  }
+
+  window.appendSerialLog = appendSerialLog;
+
+  function triggerResize() {
+    if (workspace && typeof Blockly !== 'undefined') {
+      Blockly.svgResize(workspace);
+      if (workspace.toolbox_ && typeof workspace.toolbox_.position === 'function') workspace.toolbox_.position();
+    }
+  }
+
+  window.addEventListener('resize', triggerResize);
+})();
+/* ============================================================
+   CUBELINK Studio ?臾??ㅽ뵆?섏떆) ?섏씠吏 ?숈옉 ?쒖뼱
+   ============================================================ */
+function setupIntroPage() {
+  const btnStart = document.getElementById('btn-intro-start');
+  const introPage = document.getElementById('intro-page');
+  
+  if (btnStart && introPage) {
+    btnStart.addEventListener('click', () => {
+      // ?臾??섏씠吏???щ챸???좊땲硫붿씠???대옒??異붽?
+      introPage.classList.add('fade-out');
+      
+      // ?좊땲硫붿씠??0.4珥????앸궃 ???꾩쟾???붾㈃?먯꽌 ?쒖쇅 (?ㅼそ 硫붿씤?붾㈃ 議곗옉 諛⑺빐 湲덉?)
+      setTimeout(() => {
+        introPage.style.display = 'none';
+      }, 400);
+    });
+  }
+}
+
+// 釉뚮씪?곗?媛 HTML??紐⑤몢 ?쎌? ???덉쟾?섍쾶 setupIntroPage瑜??ㅽ뻾?섎룄濡??곌껐
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', setupIntroPage);
+} else {
+  setupIntroPage();
+}
