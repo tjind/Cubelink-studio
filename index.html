@@ -70,7 +70,11 @@
 <header>
   <button class="btn hamburger-btn" id="btnHamburger" title="미션 목록 열기/닫기">☰</button>
   <div class="brand">
-    <div class="brand-logo">EOROUM</div>
+       <div class="brand-logo" id="brandLogo" style="cursor:pointer;" title="대문으로 돌아가기">
+      <img src="logo.png" alt="EOROUM" style="height:32px; display:block;"
+           onerror="this.style.display='none'; this.parentNode.textContent='EOROUM';">
+    </div>
+
     <div class="brand-title">CUBELINK STUDIO<span class="brand-version">v2.9.2</span></div>
   </div>
 
@@ -84,6 +88,11 @@
       title="로봇을 연결하고 모든 모터를 90도 차렷 자세로 정렬합니다.">
       🔌 로봇 연결 및 초기화 (90도)
     </button>
+        <button class="btn" id="btnSafeShutdown" style="display:none; background: linear-gradient(135deg, #e67e22, #d35400) !important; color: white !important; font-weight: 700;"
+      title="서보를 안전 위치로 정렬한 뒤 연결을 종료합니다 (뚜껑 닫기 가능 자세)">
+      🔻 안전 종료
+    </button>
+
 
     <button class="btn primary" id="btnRunRealtime"
       style="background: linear-gradient(135deg, #D4AF37, #B8941F) !important; color: black !important; font-weight: 700;"

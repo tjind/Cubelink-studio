@@ -1832,6 +1832,76 @@ function setupIntroPage() {
       }, 400);
     });
   }
+    // ===== 로고 클릭 → 대문(인트로)으로 (웹에서만) =====
+  const brandLogo = document.getElementById('brandLogo');
+  if (brandLogo) {
+    brandLogo.addEventListener('click', () => {
+      if (window.cubelink) return;              // exe에서는 무시
+      const introPage = document.getElementById('intro-page');
+      if (!introPage) return;
+      introPage.style.display = '';
+      introPage.classList.remove('fade-out');
+    });
+  }
+
+  // ===== 안전 종료 버튼: 서보 안전 위치 정렬 후 연결 종료 =====
+  const btnSafe = document.getElementById('btnSafeShutdown');
+  if (btnSafe) {
+    btnSafe.addEventListener('click', async () => {
+      const port = window._serialPort;
+      if (!port || !port.writable) {
+        alert('로봇이 연결되어 있지 않습니다.');
+        return;
+      }
+      if (!confirm('서보를 안전 위치로 정렬한 뒤 연결을 종료합니다.\n계속할까요?')) return;
+      btnSafe.disabled = true;
+
+      // 안전 위치: 6·11번 90도, 9·10번 10도 (캘리브레이션 오프셋 반영)
+      const safePos = [ [6, 90], [11, 90], [9, 10], [10, 10] ];
+      let writer = null;
+      try {
+              writer = port.writable.getWriter();
+        const enc = new TextEncoder();
+        const SEC = 1;                       // 이동 시간 1초
+        const STEPS = 20;                    // 20단계로 나눠 부드럽게
+        // 현재 각도에서 목표 각도까지 단계별로 이동
+        for (const [pin, target] of safePos) {
+          const start = (window.servoAngles && window.servoAngles[pin] != null)
+                        ? window.servoAngles[pin] : 90;
+          const off = (window.getServoOffset ? window.getServoOffset(pin) : 0);
+          for (let i = 1; i <= STEPS; i++) {
+            const a = Math.round(start + (target - start) * (i / STEPS));
+            let realAngle = Math.round(a + off);
+            if (String(pin) === '11') realAngle = Math.max(50, Math.min(120, realAngle));
+            else realAngle = Math.max(0, Math.min(180, realAngle));
+            await writer.write(enc.encode(`S,${pin},${realAngle}\n`));
+            if (window.Sim) Sim.setServoAngle(pin, a);       // 시뮬도 같이 이동
+            if (window.servoAngles) window.servoAngles[pin] = a;
+            await new Promise(r => setTimeout(r, (SEC * 1000) / STEPS));  // 단계 간 간격
+          }
+        }
+        await new Promise(r => setTimeout(r, 300));          // 마지막 이동 완료 대기
+
+      } catch (e) {
+        console.warn('안전 종료 중 오류:', e);
+        alert('안전 종료 중 오류: ' + e.message);
+      } finally {
+        try { writer && writer.releaseLock(); } catch (_) {}  // ★ 반드시 락 해제
+      }
+
+      if (window.fullCleanup) await window.fullCleanup();     // 연결 종료
+      btnSafe.disabled = false;
+    });
+  }
+
+  // ===== 연결 상태에 따라 안전 종료 버튼 표시/숨김 =====
+  setInterval(() => {
+    const b = document.getElementById('btnSafeShutdown');
+    if (!b) return;
+    const connected = !!(window._serialPort && window._serialPort.writable);
+    b.style.display = connected ? '' : 'none';
+  }, 500);
+
 }
 
 // 브라우저가 HTML을 모두 읽은 후 안전하게 setupIntroPage를 실행하도록 연결
