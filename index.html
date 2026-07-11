@@ -1642,20 +1642,32 @@ window.addEventListener('load', () => {
   }, 200);
 
 
-  let zoomTimer = null;
-  const ZOOM_HOLD_MS = 1000; // 마지막 서보 명령 후 원래 크기로 복귀 대기 시간
-
+    // ▶ 실행 시작 시: 확대 (실행 중엔 계속 확대 상태 유지)
   window.triggerRobotZoom = function () {
-    if (!window._runtimeRunning) return;   // ★ 실행 중이 아니면 확대하지 않음
+    if (!window._runtimeRunning) return;
     const view = document.getElementById('robot-3d-view');
     if (!view) return;
     view.classList.add('zoom-active');
-    if (zoomTimer) clearTimeout(zoomTimer);
-    zoomTimer = setTimeout(() => {
-      view.classList.remove('zoom-active');
-      zoomTimer = null;
-    }, ZOOM_HOLD_MS);
   };
+
+  // ⏹ 정지 시: 축소 (수동 호출용)
+  window.stopRobotZoom = function () {
+    const view = document.getElementById('robot-3d-view');
+    if (view) view.classList.remove('zoom-active');
+  };
+
+  // ★ _runtimeRunning이 false로 바뀌는 순간을 자동 감지하여 축소
+  (function watchRuntimeStop(){
+    let lastState = window._runtimeRunning;
+    setInterval(function(){
+      const cur = window._runtimeRunning;
+      if (lastState === true && cur !== true) {
+        const view = document.getElementById('robot-3d-view');
+        if (view) view.classList.remove('zoom-active');
+      }
+      lastState = cur;
+    }, 100);
+  })();
 })();
 </script>
 <script>
