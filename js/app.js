@@ -1216,7 +1216,13 @@ async function sendServo(pin, angle) {
   const sendSim  = simOnly || !window.shouldUpdateGraphic || window.shouldUpdateGraphic();
 
   if (sendReal && writer) {
-    try { await writer.write(enc.encode(`S,${pin},${angle}\n`)); }
+    // ★ 캘리브레이션: 실물 전송 각도 = 명령 각도 + 해당 핀 Offset
+    const off = (window.getServoOffset ? window.getServoOffset(pin) : 0);
+    let realAngle = Math.round(angle + off);
+    if (String(pin) === '11') realAngle = Math.max(50, Math.min(120, realAngle)); // 그리퍼 보호
+    else realAngle = Math.max(0, Math.min(180, realAngle));                       // 일반 축 보호
+
+    try { await writer.write(enc.encode(`S,${pin},${realAngle}\n`)); }
     catch(e) {
       appendSerialLog(`🛑 시리얼 끊김 — 실행 중지: ${e.message}`);
       window._runtimeRunning = false;
