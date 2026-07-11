@@ -1658,16 +1658,18 @@ window.addEventListener('load', () => {
 
   // ★ _runtimeRunning이 false로 바뀌는 순간을 자동 감지하여 축소
   (function watchRuntimeStop(){
-    let lastState = window._runtimeRunning;
+    let lastState = null;
     setInterval(function(){
-      const cur = window._runtimeRunning;
-      if (lastState === true && cur !== true) {
-        const view = document.getElementById('robot-3d-view');
-        if (view) view.classList.remove('zoom-active');
-      }
+      const cur = !!window._runtimeRunning;
+      if (cur === lastState) return;
       lastState = cur;
+      const view = document.getElementById('robot-3d-view');
+      if (!view) return;
+      if (cur) view.classList.add('zoom-active');
+      else view.classList.remove('zoom-active');
     }, 100);
   })();
+
 })();
 </script>
 <script>
