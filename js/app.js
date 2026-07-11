@@ -1514,6 +1514,25 @@ async function sendServo(pin, angle) {
           window._userVars[name] = cur + delta;
           return;
         }
+        // ═══ 사용자 정의 함수 호출 (반환값 없음) ═══
+        if (t === 'procedures_callnoreturn') {
+          const funcName = b.getFieldValue('NAME');
+          const ws = window.workspace;
+          // 워크스페이스에서 같은 이름의 함수 정의 블록 찾기
+          const defBlock = ws.getAllBlocks(false).find(x =>
+            (x.type === 'procedures_defnoreturn' || x.type === 'procedures_defreturn') &&
+            x.getFieldValue('NAME') === funcName);
+          if (defBlock) {
+            const bodyArr = chainToArray(defBlock.getInputTargetBlock('STACK'));
+            for (const ib of bodyArr) {
+              if (!window._runtimeRunning) return;
+              await execBlock(ib);
+            }
+          } else {
+            appendSerialLog(`⚠ 함수 '${funcName}' 정의를 찾을 수 없음`);
+          }
+          return;
+        }
 
         // 알 수 없는 블록 → 조용히 무시
       } catch (blockErr) {
@@ -1616,15 +1635,16 @@ async function sendServo(pin, angle) {
         MissionProgress.reset();
         WorkspaceStorage.clearAll();
         alert('✓ 모두 초기화되었습니다.');
-        if (MissionProgress.current && workspace) {
+                if (workspace) {
           workspace.clear();
           try {
-            const initBlock = workspace.newBlock('arduino_setup_loop');
-            initBlock.initSvg();
-            initBlock.render();
-            initBlock.moveBy(20, 20);
-          } catch (e) {}
+            const xml = Blockly.utils.xml.textToDom(
+              '<xml><block type="arduino_setup_loop" x="20" y="20"></block></xml>'
+            );
+            Blockly.Xml.domToWorkspace(xml, workspace);
+          } catch (e) { console.error('초기화 재구성 오류:', e); }
         }
+
       }
     });
 
@@ -1635,15 +1655,16 @@ async function sendServo(pin, angle) {
       // 1. 저장본 삭제
       WorkspaceStorage.clear(currentMissionId);
       // 2. workspace 초기화 (빈 setup/loop)
-      if (workspace) {
+        if (workspace) {
         workspace.clear();
         try {
-          const initBlock = workspace.newBlock('arduino_setup_loop');
-          initBlock.initSvg();
-          initBlock.render();
-          initBlock.moveBy(20, 20);
-        } catch (e) {}
+          const xml = Blockly.utils.xml.textToDom(
+            '<xml><block type="arduino_setup_loop" x="20" y="20"></block></xml>'
+          );
+          Blockly.Xml.domToWorkspace(xml, workspace);
+        } catch (e) { console.error('미션 재시작 오류:', e); }
       }
+
       // 3. MissionProgress state 초기화 (검증 상태 리셋)
       if (window.MissionProgress) {
         MissionProgress.state = {};
