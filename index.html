@@ -1683,12 +1683,56 @@ window.addEventListener('load', () => {
 
 })();
 </script>
+<!-- 다운로드 안내 팝업 (웹 전용) -->
+<style>
+  #dlGuide {
+    position: fixed; top: 20px; right: 20px; z-index: 99999;
+    width: 340px; max-width: calc(100vw - 40px);
+    background: #1e1e1e; color: #f0f0f0;
+    border: 1px solid #ffd479; border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0,0,0,.5);
+    padding: 18px 20px; font-size: 14px; line-height: 1.6;
+    transform: translateX(400px); opacity: 0;
+    transition: transform .4s ease, opacity .4s ease;
+  }
+  #dlGuide.show { transform: translateX(0); opacity: 1; }
+  #dlGuide h3 { margin: 0 0 10px; color: #ffd479; font-size: 16px; }
+  #dlGuide .step { margin: 10px 0; padding-left: 4px; }
+  #dlGuide .step b { color: #ffd479; }
+  #dlGuide .close {
+    position: absolute; top: 10px; right: 14px; cursor: pointer;
+    background: none; border: none; color: #aaa; font-size: 20px; line-height: 1;
+  }
+  #dlGuide .close:hover { color: #fff; }
+</style>
+<div id="dlGuide">
+  <button class="close" onclick="document.getElementById('dlGuide').classList.remove('show')">×</button>
+  <h3>💻 다운로드 안내</h3>
+  <div class="step">⬇ <b>다운로드가 시작되었어요!</b><br>
+    브라우저 <b>오른쪽 위 다운로드(↓) 아이콘</b>을 눌러 진행 상황을 확인하세요.</div>
+  <div class="step">🛡 처음 실행하면 파란색 <b>"Windows의 PC 보호"</b> 창이 떠요.<br>
+    → 작은 글씨 <b>[추가 정보]</b> 클릭<br>
+    → <b>[실행]</b> 버튼 누르기!<br>
+    <span style="color:#9ad;">(안전한 교육용 프로그램입니다)</span></div>
+</div>
+
 <script>
-  // exe(Electron)에서는 다운로드 버튼 숨김 — 웹에서만 표시
+  // exe(Electron)에서는 다운로드 버튼 숨김 — 웹에서만 표시 + 다운로드 안내 팝업
   document.addEventListener('DOMContentLoaded', function () {
     if (window.cubelink) {
       const b = document.getElementById('btn-download-exe');
       if (b) b.style.display = 'none';
+    }
+
+    // 다운로드 버튼 클릭 시 안내 팝업 표시 (웹 전용)
+    const dlBtn = document.getElementById('btn-download-exe');
+    const guide = document.getElementById('dlGuide');
+    if (dlBtn && guide) {
+      dlBtn.addEventListener('click', function () {
+        guide.classList.add('show');
+        clearTimeout(window._dlGuideTimer);
+        window._dlGuideTimer = setTimeout(() => guide.classList.remove('show'), 12000);
+      });
     }
   });
 </script>
@@ -1696,3 +1740,4 @@ window.addEventListener('load', () => {
 </body>
 
 </html>
+
