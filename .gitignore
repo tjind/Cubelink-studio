@@ -47,3 +47,11 @@ _archive/
 *.v289_*
 _diag_*.txt
 _handover_*.txt
+
+# 로컬 백업 파일 (배포 제외)
+js/app.js.broken
+js/app.js.bak
+js/app.js.fix*
+js/app.js.cc_*
+js/app.js.backup_*
+js/app.js.autofix_*

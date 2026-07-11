@@ -1,4 +1,4 @@
-/**
+﻿/**
  * CUBELINK Studio v2.7.2 - 메인 애플리케이션 제어 로직
  * 핵심 개선 (v2.7.1 → v2.7.2):
  *  - blocks.js 실제 필드명에 맞춰 evalValue 전면 보정
@@ -121,7 +121,6 @@
         return false;
       }
     },
-
     // ───── 🟡 중급과정 ─────
     {
       id: 'm4', level: 'intermediate',
@@ -1624,18 +1623,17 @@ async function sendServo(pin, angle) {
         setTimeout(triggerResize, 50);
       }
     });
-    document.getElementById('btnResetProgress')?.addEventListener('click', () => {
+    document.getElementById('btnResetProgress')?.addEventListener('click', async () => {
       const hasProgress = MissionProgress.done.size > 0;
       const hasSavedWork = Object.keys(localStorage).some(k => k.startsWith('cubelink_ws_'));
       if (!hasProgress && !hasSavedWork) {
         alert('초기화할 내용이 없습니다.');
         return;
       }
-      if (confirm(`미션 완료 기록(${MissionProgress.done.size}개)과\n저장된 작업물을 모두 삭제합니다.\n계속하시겠습니까?`)) {
+      if (await window.customConfirm(`미션 완료 기록(${MissionProgress.done.size}개)과\n저장된 작업물을 모두 삭제합니다.\n계속하시겠습니까?`)) {
         MissionProgress.reset();
         WorkspaceStorage.clearAll();
-        alert('✓ 모두 초기화되었습니다.');
-                if (workspace) {
+        if (workspace) {
           workspace.clear();
           try {
             const xml = Blockly.utils.xml.textToDom(
@@ -1644,7 +1642,13 @@ async function sendServo(pin, angle) {
             Blockly.Xml.domToWorkspace(xml, workspace);
           } catch (e) { console.error('초기화 재구성 오류:', e); }
         }
-
+        setTimeout(() => {
+          try {
+            window.focus();
+            if (window.cubelink && window.cubelink.focusWindow) window.cubelink.focusWindow();
+            if (workspace) { workspace.getParentSvg().focus(); triggerResize(); }
+          } catch (_) {}
+        }, 60);
       }
     });
 
@@ -1817,6 +1821,27 @@ async function sendServo(pin, angle) {
 /* ============================================================
    CUBELINK Studio 대문(스플래시) 페이지 동작 제어
    ============================================================ */
+// 네이티브 confirm 대체 (exe에서 포커스 안 뺏기는 HTML 확인창)
+window.customConfirm = function(message) {
+  return new Promise((resolve) => {
+    const modal = document.getElementById('confirmModal');
+    const msg = document.getElementById('confirmModalMsg');
+    const okBtn = document.getElementById('confirmModalOk');
+    const cancelBtn = document.getElementById('confirmModalCancel');
+    if (!modal) { resolve(window.confirm(message)); return; }
+    msg.textContent = message;
+    modal.style.display = 'flex';
+    const cleanup = (result) => {
+      modal.style.display = 'none';
+      okBtn.onclick = null;
+      cancelBtn.onclick = null;
+      resolve(result);
+    };
+    okBtn.onclick = () => cleanup(true);
+    cancelBtn.onclick = () => cleanup(false);
+  });
+};
+
 function setupIntroPage() {
   const btnStart = document.getElementById('btn-intro-start');
   const introPage = document.getElementById('intro-page');

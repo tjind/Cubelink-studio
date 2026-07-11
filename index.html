@@ -1391,7 +1391,18 @@ window.addEventListener('load', () => {
 
      <!-- PWA: Service Worker 등록 (v2.8.9: 자동 업데이트 감지) -->
     <script>
-      if ('serviceWorker' in navigator) {
+           // exe(Electron)에서는 Service Worker 사용 안 함 → 옛 캐시가 최신 코드를 가로채는 문제 방지
+      if (window.cubelink && 'serviceWorker' in navigator) {
+        // exe에서는 기존에 등록된 SW를 모두 해제하고 캐시도 비움
+        navigator.serviceWorker.getRegistrations().then((regs) => {
+          regs.forEach((r) => r.unregister());
+          console.log('[PWA] exe 환경 → Service Worker 해제 완료');
+        });
+        if (window.caches) {
+          caches.keys().then((names) => names.forEach((n) => caches.delete(n)));
+        }
+      } else if (!window.cubelink && 'serviceWorker' in navigator) {
+
         window.addEventListener('load', () => {
                  // v2.9.2: 새 버전 SW가 제어권을 잡으면 자동 1회 새로고침 (강사 기기 깔끔 유지)
           // controller가 이미 있을 때(=재방문 강사)만 새로고침 → 학생 첫 접속은 깜빡임 없음
@@ -1686,7 +1697,7 @@ window.addEventListener('load', () => {
 <!-- 다운로드 안내 팝업 (웹 전용) -->
 <style>
   #dlGuide {
-    position: fixed; top: 20px; right: 20px; z-index: 99999;
+    position: fixed; top: 20px; right: 20px; z-index: 99999; pointer-events: none;
     width: 340px; max-width: calc(100vw - 40px);
     background: #1e1e1e; color: #f0f0f0;
     border: 1px solid #ffd479; border-radius: 12px;
@@ -1695,7 +1706,7 @@ window.addEventListener('load', () => {
     transform: translateX(400px); opacity: 0;
     transition: transform .4s ease, opacity .4s ease;
   }
-  #dlGuide.show { transform: translateX(0); opacity: 1; }
+  #dlGuide.show { transform: translateX(0); opacity: 1; pointer-events: auto; }
   #dlGuide h3 { margin: 0 0 10px; color: #ffd479; font-size: 16px; }
   #dlGuide .step { margin: 10px 0; padding-left: 4px; }
   #dlGuide .step b { color: #ffd479; }
@@ -1736,6 +1747,16 @@ window.addEventListener('load', () => {
     }
   });
 </script>
+<!-- 커스텀 확인 모달 (네이티브 confirm 대체: exe 포커스 문제 방지) -->
+<div id="confirmModal" style="display:none; position:fixed; inset:0; z-index:100000; background:rgba(0,0,0,0.5); align-items:center; justify-content:center;">
+  <div style="background:#1e1e1e; color:#f0f0f0; border:1px solid #ffd479; border-radius:12px; padding:24px 28px; max-width:420px; box-shadow:0 8px 30px rgba(0,0,0,.6);">
+    <div id="confirmModalMsg" style="font-size:15px; line-height:1.6; white-space:pre-line; margin-bottom:20px;"></div>
+    <div style="text-align:right;">
+      <button id="confirmModalCancel" style="padding:8px 18px; margin-right:8px; border-radius:8px; border:1px solid #666; background:#333; color:#ddd; cursor:pointer;">취소</button>
+      <button id="confirmModalOk" style="padding:8px 18px; border-radius:8px; border:none; background:#ffd479; color:#1e1e1e; font-weight:bold; cursor:pointer;">확인</button>
+    </div>
+  </div>
+</div>
 
 </body>
 
